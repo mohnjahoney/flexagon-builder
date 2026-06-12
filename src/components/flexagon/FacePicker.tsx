@@ -55,14 +55,14 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
   }
 
   return (
-    <div className="sheet relative flex flex-col gap-4 p-6">
-      <div className="flex items-baseline justify-center">
-        <span className="roman-numeral text-3xl leading-none">{numeral}</span>
-      </div>
+    <div className="sheet relative flex flex-col gap-3 p-5 pt-4">
+      <span className="roman-numeral absolute left-4 top-3 text-2xl leading-none text-[var(--color-ink-soft)]">
+        {numeral}
+      </span>
 
       {/* Pointy-top regular hexagon: w/h = √3/2 ≈ 0.866 */}
       <div
-        className="relative mx-auto w-full max-w-[225px]"
+        className="relative mx-auto w-full max-w-[180px]"
         style={{ aspectRatio: "0.8660254 / 1" }}
       >
         <div

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, FileCheck2, Loader2, Printer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacePicker } from "@/components/flexagon/FacePicker";
@@ -26,11 +26,25 @@ function Index() {
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<BuiltPdf | null>(null);
   const [stage, setStage] = useState<PdfBuildStage | "ready" | null>(null);
+  const buildButtonRef = useRef<HTMLButtonElement | null>(null);
+  const busyRef = useRef(false);
 
   const hasAny = !!(face1 || face2 || face3);
   const hasAll = !!(face1 && face2 && face3);
 
+  useEffect(() => {
+    const button = buildButtonRef.current;
+    if (!button) return;
+    const handleClick = () => {
+      if (!busyRef.current) void build();
+    };
+    button.addEventListener("click", handleClick);
+    return () => button.removeEventListener("click", handleClick);
+  }, [face1, face2, face3]);
+
   async function build() {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setStage("rendering-strip");
     try {
@@ -43,6 +57,7 @@ function Index() {
       setStage(null);
       toast.error("Sorry — the PDF could not be generated. Check the console for details.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -87,6 +102,7 @@ function Index() {
           </div>
 
           <Button
+            ref={buildButtonRef}
             onClick={build}
             disabled={busy}
             className="mt-2 h-12 w-full rounded-sm bg-[var(--color-oxblood)] text-[var(--color-paper)] hover:bg-[var(--color-oxblood)]/90"

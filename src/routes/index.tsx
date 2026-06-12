@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Download, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Download, FileCheck2, Loader2, Printer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacePicker } from "@/components/flexagon/FacePicker";
 import { FlexagonPreview } from "@/components/flexagon/FlexagonPreview";
-import { buildFlexagonPdf, type BuiltPdf } from "@/lib/flexagon/pdf";
+import { buildFlexagonPdf, type BuiltPdf, type PdfBuildStage } from "@/lib/flexagon/pdf";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -25,28 +25,23 @@ function Index() {
   const [face3, setFace3] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<BuiltPdf | null>(null);
+  const [stage, setStage] = useState<PdfBuildStage | "ready" | null>(null);
 
   const hasAny = !!(face1 || face2 || face3);
   const hasAll = !!(face1 && face2 && face3);
-
-  // Revoke the previous object URL whenever we build a new one or unmount.
-  useEffect(() => {
-    return () => {
-      if (pdf) URL.revokeObjectURL(pdf.url);
-    };
-  }, [pdf]);
+  const pdfDataUrl = pdf ? `data:application/pdf;base64,${pdf.base64}` : "";
 
   async function build() {
     setBusy(true);
+    setStage("rendering-strip");
     try {
-      const built = await buildFlexagonPdf({ face1, face2, face3 }, "hexaflexagon.pdf");
-      setPdf((prev) => {
-        if (prev) URL.revokeObjectURL(prev.url);
-        return built;
-      });
+      const built = await buildFlexagonPdf({ face1, face2, face3 }, "hexaflexagon.pdf", setStage);
+      setPdf(built);
+      setStage("ready");
       toast.success(`PDF ready — ${(built.sizeBytes / 1024).toFixed(0)} KB`);
     } catch (err) {
       console.error("[flexagon] PDF generation failed:", err);
+      setStage(null);
       toast.error("Sorry — the PDF could not be generated. Check the console for details.");
     } finally {
       setBusy(false);

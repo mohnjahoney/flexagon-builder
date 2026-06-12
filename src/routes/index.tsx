@@ -29,7 +29,6 @@ function Index() {
 
   const hasAny = !!(face1 || face2 || face3);
   const hasAll = !!(face1 && face2 && face3);
-  const pdfDataUrl = pdf ? `data:application/pdf;base64,${pdf.base64}` : "";
 
   async function build() {
     setBusy(true);
@@ -104,6 +103,8 @@ function Index() {
                     : "Build — blank template"}
           </Button>
 
+          {stage && <BuildStages stage={stage} />}
+
           <Link to="/how-to-fold" className="text-center text-xs text-[var(--color-ink-soft)] underline-offset-4 hover:underline">
             Read the folding instructions
           </Link>
@@ -119,35 +120,17 @@ function Index() {
                 <h3 className="mt-1 font-display text-2xl">Inspect &amp; save</h3>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <a
-                  href={pdf.url}
-                  download={pdf.filename}
-                  className="inline-flex h-10 items-center gap-2 rounded-sm bg-[var(--color-ink)] px-4 text-sm text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
-                >
-                  <Download className="h-4 w-4" />
-                  Download {pdf.filename}
-                </a>
-                <a
-                  href={pdf.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-10 items-center gap-2 rounded-sm border border-[var(--color-hairline)] px-4 text-sm text-[var(--color-ink)] hover:bg-[var(--color-paper-deep)]"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Open in new tab
-                </a>
+                <PdfPostForm pdf={pdf} mode="attachment" />
+                <PdfPostForm pdf={pdf} mode="inline" />
               </div>
             </div>
             <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
-              If the download button doesn't trigger (some sandboxed previews block it), the "Open in new tab" link
-              always works — your browser's PDF viewer has its own save button.
+              The empty PDF iframe is gone: these proof images are the exact rendered pages that are encoded into the PDF.
+              Saving uses a top-level file response instead of a blocked blob URL or popup.
             </p>
-            <div className="h-[80vh] w-full overflow-hidden rounded-sm border border-[var(--color-hairline)] bg-[var(--color-paper-deep)]">
-              <iframe
-                title="Flexagon PDF preview"
-                src={pdf.url}
-                className="h-full w-full"
-              />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ProofPage label="Page 1 · front" src={pdf.previews.front} />
+              <ProofPage label="Page 2 · back" src={pdf.previews.back} />
             </div>
           </div>
         </section>

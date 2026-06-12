@@ -1,7 +1,27 @@
 import { jsPDF } from "jspdf";
 import { renderSheets, type FaceImages } from "./render";
 
-export async function buildAndSaveFlexagonPdf(faces: FaceImages, filename = "hexaflexagon.pdf"): Promise<void> {
+export interface BuiltPdf {
+  blob: Blob;
+  url: string;
+  filename: string;
+  sizeBytes: number;
+}
+
+/**
+ * Build the trihexaflexagon PDF and return a Blob + object URL.
+ *
+ * We intentionally do NOT call `pdf.save()` here. In Lovable's sandboxed
+ * preview iframe the synthetic anchor click that jsPDF performs is often
+ * blocked silently — the file is generated but never reaches the user.
+ * Returning the blob lets the caller hand the user an explicit
+ * <a download>, an `iframe` preview, and an "open in new tab" link, all of
+ * which work inside the sandbox.
+ */
+export async function buildFlexagonPdf(
+  faces: FaceImages,
+  filename = "hexaflexagon.pdf",
+): Promise<BuiltPdf> {
   const { front, back } = await renderSheets(faces);
   const pdf = new jsPDF({ orientation: "landscape", unit: "in", format: "letter" });
   const W = 11, H = 8.5;
@@ -13,10 +33,9 @@ export async function buildAndSaveFlexagonPdf(faces: FaceImages, filename = "hex
   pdf.addPage("letter", "portrait");
   drawInstructions(pdf);
 
-  // jsPDF.save handles the download internally — works inside sandboxed
-  // iframes that allow downloads, and avoids issues with manually constructed
-  // anchor clicks on very large blob URLs.
-  pdf.save(filename);
+  const blob = pdf.output("blob");
+  const url = URL.createObjectURL(blob);
+  return { blob, url, filename, sizeBytes: blob.size };
 }
 
 function drawInstructions(pdf: jsPDF) {

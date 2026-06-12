@@ -17,6 +17,7 @@ export interface BuildOptions {
   layout?: PrintLayout;
   dpi?: number;
   filename?: string;
+  includeInstructions?: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ export async function buildFlexagonPdf(
 ): Promise<BuiltPdf> {
   const layout: PrintLayout = opts.layout ?? "double-sided";
   const dpi = opts.dpi ?? 600;
+  const includeInstructions = opts.includeInstructions ?? true;
   const filename = opts.filename ?? `hexaflexagon-${layout}.pdf`;
 
   onStage?.("rendering-strip");
@@ -50,8 +52,10 @@ export async function buildFlexagonPdf(
     pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, W, H, undefined, "FAST");
   });
 
-  pdf.addPage("letter", "portrait");
-  drawInstructions(pdf, layout);
+  if (includeInstructions) {
+    pdf.addPage("letter", "portrait");
+    drawInstructions(pdf, layout);
+  }
 
   onStage?.("encoding-file");
   const blob = pdf.output("blob");

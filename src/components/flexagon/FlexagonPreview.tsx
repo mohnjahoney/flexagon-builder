@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { renderSheets, type FaceImages } from "@/lib/flexagon/render";
 
 interface FlexagonPreviewProps {
@@ -6,9 +7,9 @@ interface FlexagonPreviewProps {
 }
 
 /**
- * Honest preview: renders the actual printed double-sided pages at preview
- * DPI so the user sees how each face is scattered as six 60° wedges across
- * the 10 triangles of the strip.
+ * Honest preview of the two printable strips — showing how each face is
+ * scattered as six 60° wedges across ten triangles. Toggle between the two
+ * strips (A: outer/visible at rest, B: the reverse, revealed by flexing).
  */
 export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
   const [side, setSide] = useState<0 | 1>(0);
@@ -22,7 +23,6 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
     let cancelled = false;
     (async () => {
       try {
-        // Use a low preview DPI; we only need to look at it on a screen.
         const { previews } = await renderSheets(faces, { dpi: 150, layout: "double-sided" });
         if (cancelled || id !== reqId.current) return;
         setUrls(previews.map((c) => c.toDataURL("image/jpeg", 0.78)));
@@ -40,11 +40,11 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
   return (
     <div className="sheet flex flex-col gap-5 p-8">
       <div className="flex w-full items-baseline justify-between">
-        <span className="label-eyebrow">Preview · printed strip</span>
+        <span className="label-eyebrow">Strip layout</span>
         <div className="flex items-center gap-1 rounded-sm border border-[var(--color-hairline)] p-0.5">
           {[
-            { id: 0 as const, label: "front" },
-            { id: 1 as const, label: "back" },
+            { id: 0 as const, label: "Strip A" },
+            { id: 1 as const, label: "Strip B" },
           ].map((s) => (
             <button
               key={s.id}
@@ -63,7 +63,7 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
 
       <div className="relative aspect-[11/8.5] w-full overflow-hidden bg-[var(--color-paper-deep)]">
         {src ? (
-          <img src={src} alt={`page ${side + 1} of strip`} className="flexagon-breathe h-full w-full object-contain" />
+          <img src={src} alt={`strip ${side === 0 ? "A" : "B"} layout`} className="flexagon-breathe h-full w-full object-contain" />
         ) : (
           <div className="grid h-full w-full place-items-center font-display text-sm italic text-[var(--color-ink-soft)]">
             composing…
@@ -78,7 +78,10 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
 
       <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
         Each face is sliced into six 60° wedges and scattered across the strip. When folded into thirds, the wedges
-        recompose each hexagonal face.
+        recompose each hexagonal face.{" "}
+        <Link to="/how-to-fold" className="underline underline-offset-2 hover:text-[var(--color-ink)]">
+          Read the folding instructions →
+        </Link>
       </p>
     </div>
   );

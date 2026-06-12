@@ -1,21 +1,22 @@
 import { useRef, useState } from "react";
-import { Camera, ImagePlus, RefreshCw } from "lucide-react";
+import { Camera, Cat, ImagePlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HexCropper } from "./HexCropper";
 import { CameraCapture } from "./CameraCapture";
+import { toast } from "sonner";
 
 interface FacePickerProps {
   numeral: "I" | "II" | "III";
-  caption: string;
   value: string | null;
   onChange: (dataUrl: string | null) => void;
 }
 
-export function FacePicker({ numeral, caption, value, onChange }: FacePickerProps) {
+export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [rawSrc, setRawSrc] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [camOpen, setCamOpen] = useState(false);
+  const [catBusy, setCatBusy] = useState(false);
 
   function openCrop(src: string) {
     setRawSrc(src);
@@ -31,11 +32,32 @@ export function FacePicker({ numeral, caption, value, onChange }: FacePickerProp
     e.target.value = "";
   }
 
+  async function fetchCat() {
+    if (catBusy) return;
+    setCatBusy(true);
+    try {
+      const res = await fetch(`https://cataas.com/cat?width=900&height=900&t=${Date.now()}-${Math.random()}`);
+      if (!res.ok) throw new Error(`cataas ${res.status}`);
+      const blob = await res.blob();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result as string);
+        r.onerror = reject;
+        r.readAsDataURL(blob);
+      });
+      openCrop(dataUrl);
+    } catch (err) {
+      console.error("[cats] fetch failed", err);
+      toast.error("Couldn't reach the cat archive. Try again in a moment.");
+    } finally {
+      setCatBusy(false);
+    }
+  }
+
   return (
     <div className="sheet relative flex flex-col gap-4 p-6">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-center">
         <span className="roman-numeral text-3xl leading-none">{numeral}</span>
-        <span className="label-eyebrow">Face</span>
       </div>
 
       {/* Pointy-top regular hexagon: w/h = √3/2 ≈ 0.866 */}
@@ -66,8 +88,6 @@ export function FacePicker({ numeral, caption, value, onChange }: FacePickerProp
         )}
       </div>
 
-      <p className="font-display text-center text-sm italic text-[var(--color-ink-soft)]">{caption}</p>
-
       <div className="flex flex-wrap justify-center gap-2">
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
         <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
@@ -76,11 +96,9 @@ export function FacePicker({ numeral, caption, value, onChange }: FacePickerProp
         <Button variant="outline" size="sm" onClick={() => setCamOpen(true)}>
           <Camera /> Camera
         </Button>
-        {value && (
-          <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
-            <RefreshCw /> Reset
-          </Button>
-        )}
+        <Button variant="outline" size="sm" onClick={fetchCat} disabled={catBusy} title="Fetch a random cat from cataas.com">
+          {catBusy ? <Loader2 className="animate-spin" /> : <Cat />} Cats
+        </Button>
       </div>
 
       <HexCropper

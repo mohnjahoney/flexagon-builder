@@ -28,6 +28,7 @@ function Index() {
   const [face2, setFace2] = useState<string | null>(cat2);
   const [face3, setFace3] = useState<string | null>(cat3);
   const [layout, setLayout] = useState<PrintLayout>("double-sided");
+  const [includeInstructions, setIncludeInstructions] = useState(true);
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<BuiltPdf | null>(null);
   const [stage, setStage] = useState<PdfBuildStage | "ready" | null>(null);
@@ -48,7 +49,7 @@ function Index() {
     setBusy(true);
     setStage("rendering-strip");
     try {
-      const built = await buildFlexagonPdf(faces, { layout }, setStage);
+      const built = await buildFlexagonPdf(faces, { layout, includeInstructions }, setStage);
       setPdf((prev) => {
         if (prev?.url) URL.revokeObjectURL(prev.url);
         return built;
@@ -93,9 +94,9 @@ function Index() {
       </section>
 
       <section className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-6 px-6 md:grid-cols-3">
-        <FacePicker numeral="I" caption="the face shown at rest" value={face1} onChange={setFace1} />
-        <FacePicker numeral="II" caption="revealed on the first flex" value={face2} onChange={setFace2} />
-        <FacePicker numeral="III" caption="the hidden third face" value={face3} onChange={setFace3} />
+        <FacePicker numeral="I" value={face1} onChange={setFace1} />
+        <FacePicker numeral="II" value={face2} onChange={setFace2} />
+        <FacePicker numeral="III" value={face3} onChange={setFace3} />
       </section>
 
       <section className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 px-6 pb-10 md:grid-cols-[1.1fr_1fr]">
@@ -118,6 +119,19 @@ function Index() {
 
           <LayoutToggle value={layout} onChange={setLayout} />
 
+          <label className="flex items-start gap-3 border-t border-[var(--color-hairline)] pt-5 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeInstructions}
+              onChange={(e) => setIncludeInstructions(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[var(--color-oxblood)]"
+            />
+            <span>
+              <span className="font-display">Include folding instructions</span>
+              <span className="ml-2 text-[var(--color-ink-soft)]">adds one portrait page at the end</span>
+            </span>
+          </label>
+
           <Button
             onClick={build}
             disabled={busy}
@@ -136,10 +150,6 @@ function Index() {
           </Button>
 
           {stage && <BuildStages stage={stage} />}
-
-          <Link to="/how-to-fold" className="text-center text-xs text-[var(--color-ink-soft)] underline-offset-4 hover:underline">
-            Read the folding instructions
-          </Link>
         </div>
       </section>
 

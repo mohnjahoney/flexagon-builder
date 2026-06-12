@@ -93,9 +93,9 @@ function Index() {
       </section>
 
       <section className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-6 px-6 md:grid-cols-3">
-        <FacePicker numeral="I" caption="the face shown at rest" value={face1} onChange={setFace1} />
-        <FacePicker numeral="II" caption="revealed on the first flex" value={face2} onChange={setFace2} />
-        <FacePicker numeral="III" caption="the hidden third face" value={face3} onChange={setFace3} />
+        <FacePicker numeral="I" value={face1} onChange={setFace1} />
+        <FacePicker numeral="II" value={face2} onChange={setFace2} />
+        <FacePicker numeral="III" value={face3} onChange={setFace3} />
       </section>
 
       <section className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 px-6 pb-10 md:grid-cols-[1.1fr_1fr]">

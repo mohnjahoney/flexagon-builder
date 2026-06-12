@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { renderSheets, type FaceImages } from "@/lib/flexagon/render";
 
 interface FlexagonPreviewProps {

@@ -1,17 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, FileCheck2, Loader2, Printer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacePicker } from "@/components/flexagon/FacePicker";
 import { FlexagonPreview } from "@/components/flexagon/FlexagonPreview";
 import { buildFlexagonPdf, type BuiltPdf, type PdfBuildStage } from "@/lib/flexagon/pdf";
+import type { PrintLayout } from "@/lib/flexagon/render";
 import { toast } from "sonner";
+import cat1 from "@/assets/cat1.jpg.asset.json";
+import cat2 from "@/assets/cat2.jpg.asset.json";
+import cat3 from "@/assets/cat3.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Hexaflexagon Atelier — compose & print" },
-      { name: "description", content: "Upload or photograph three images, crop each within a hexagon, and download a fold-ready trihexaflexagon template." },
+      { name: "description", content: "Upload three images, crop within a hexagon, and download a fold-ready trihexaflexagon template." },
       { property: "og:title", content: "Hexaflexagon Atelier" },
       { property: "og:description", content: "Compose your own trihexaflexagon from three images and print a fold-ready template." },
     ],
@@ -20,44 +24,42 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [face1, setFace1] = useState<string | null>(null);
-  const [face2, setFace2] = useState<string | null>(null);
-  const [face3, setFace3] = useState<string | null>(null);
+  const [face1, setFace1] = useState<string | null>(cat1.url);
+  const [face2, setFace2] = useState<string | null>(cat2.url);
+  const [face3, setFace3] = useState<string | null>(cat3.url);
+  const [layout, setLayout] = useState<PrintLayout>("double-sided");
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<BuiltPdf | null>(null);
   const [stage, setStage] = useState<PdfBuildStage | "ready" | null>(null);
-  const buildButtonRef = useRef<HTMLButtonElement | null>(null);
-  const busyRef = useRef(false);
 
+  const faces = useMemo(() => ({ face1, face2, face3 }), [face1, face2, face3]);
   const hasAny = !!(face1 || face2 || face3);
   const hasAll = !!(face1 && face2 && face3);
 
+  // Revoke object URLs whenever a new PDF replaces the old one (or on unmount).
   useEffect(() => {
-    const button = buildButtonRef.current;
-    if (!button) return;
-    const handleClick = () => {
-      if (!busyRef.current) void build();
+    return () => {
+      if (pdf?.url) URL.revokeObjectURL(pdf.url);
     };
-    button.addEventListener("click", handleClick);
-    return () => button.removeEventListener("click", handleClick);
-  }, [face1, face2, face3]);
+  }, [pdf]);
 
   async function build() {
-    if (busyRef.current) return;
-    busyRef.current = true;
+    if (busy) return;
     setBusy(true);
     setStage("rendering-strip");
     try {
-      const built = await buildFlexagonPdf({ face1, face2, face3 }, "hexaflexagon.pdf", setStage);
-      setPdf(built);
+      const built = await buildFlexagonPdf(faces, { layout }, setStage);
+      setPdf((prev) => {
+        if (prev?.url) URL.revokeObjectURL(prev.url);
+        return built;
+      });
       setStage("ready");
-      toast.success(`PDF ready — ${(built.sizeBytes / 1024).toFixed(0)} KB`);
+      toast.success(`PDF ready — ${(built.sizeBytes / 1024).toFixed(0)} KB · ${built.previews.length} page${built.previews.length > 1 ? "s" : ""}`);
     } catch (err) {
       console.error("[flexagon] PDF generation failed:", err);
       setStage(null);
       toast.error("Sorry — the PDF could not be generated. Check the console for details.");
     } finally {
-      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -84,25 +86,26 @@ function Index() {
       </section>
 
       <section className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 px-6 pb-10 md:grid-cols-[1.1fr_1fr]">
-        <FlexagonPreview faces={{ face1, face2, face3 }} />
+        <FlexagonPreview faces={faces} />
 
         <div className="sheet flex flex-col gap-6 p-8">
           <div>
             <span className="label-eyebrow">Step the last</span>
             <h2 className="mt-2 font-display text-3xl">Build the template</h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--color-ink-soft)]">
-              We compose the PDF here in your browser and hand it back to you. Inspect it page by page below, then save
-              or open it in a new tab to print.
+              Choose how you'll print, then we compose a 600 DPI PDF in your browser.
             </p>
           </div>
+
           <div className="space-y-2 border-t border-[var(--color-hairline)] pt-5">
             <Row label="Face I" present={!!face1} />
             <Row label="Face II" present={!!face2} />
             <Row label="Face III" present={!!face3} />
           </div>
 
+          <LayoutToggle value={layout} onChange={setLayout} />
+
           <Button
-            ref={buildButtonRef}
             onClick={build}
             disabled={busy}
             className="mt-2 h-12 w-full rounded-sm bg-[var(--color-oxblood)] text-[var(--color-paper)] hover:bg-[var(--color-oxblood)]/90"
@@ -132,21 +135,36 @@ function Index() {
           <div className="sheet flex flex-col gap-4 p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <div>
-                <span className="label-eyebrow">PDF · ready</span>
+                <span className="label-eyebrow">PDF · ready · {pdf.layout}</span>
                 <h3 className="mt-1 font-display text-2xl">Inspect &amp; save</h3>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <PdfPostForm pdf={pdf} mode="attachment" />
-                <PdfPostForm pdf={pdf} mode="inline" />
+                <a
+                  href={pdf.url}
+                  download={pdf.filename}
+                  className="inline-flex h-10 items-center gap-2 rounded-sm bg-[var(--color-ink)] px-4 text-sm text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
+                >
+                  <Download className="h-4 w-4" />
+                  Download {pdf.filename}
+                </a>
+                <a
+                  href={pdf.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-10 items-center gap-2 rounded-sm border border-[var(--color-hairline)] px-4 text-sm text-[var(--color-ink)] hover:bg-[var(--color-paper-deep)]"
+                >
+                  <Printer className="h-4 w-4" />
+                  Open in new tab
+                </a>
               </div>
             </div>
             <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
-              The empty PDF iframe is gone: these proof images are the exact rendered pages that are encoded into the PDF.
-              Saving uses a top-level file response instead of a blocked blob URL or popup.
+              Proof images below are the exact rendered pages encoded into the PDF (600 DPI source, downscaled here for the screen).
             </p>
             <div className="grid gap-4 lg:grid-cols-2">
-              <ProofPage label="Page 1 · front" src={pdf.previews.front} />
-              <ProofPage label="Page 2 · back" src={pdf.previews.back} />
+              {pdf.previews.map((src, i) => (
+                <ProofPage key={i} label={`Page ${i + 1}`} src={src} />
+              ))}
             </div>
           </div>
         </section>
@@ -164,6 +182,43 @@ function Row({ label, present }: { label: string; present: boolean }) {
       <span className={present ? "text-[var(--color-oxblood)]" : "text-[var(--color-ink-soft)]"}>
         {present ? "ready" : "not yet chosen"}
       </span>
+    </div>
+  );
+}
+
+function LayoutToggle({ value, onChange }: { value: PrintLayout; onChange: (v: PrintLayout) => void }) {
+  const options: Array<{ id: PrintLayout; title: string; sub: string }> = [
+    {
+      id: "double-sided",
+      title: "Double-sided",
+      sub: "Two pages. Print duplex (long edge) so back aligns with front.",
+    },
+    {
+      id: "single-sided",
+      title: "Single-sided",
+      sub: "One page. Cut a double-wide strip, fold in half along the seam.",
+    },
+  ];
+  return (
+    <div className="grid grid-cols-1 gap-2 border-t border-[var(--color-hairline)] pt-5 sm:grid-cols-2">
+      {options.map((opt) => {
+        const active = value === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={`rounded-sm border p-3 text-left text-xs leading-relaxed transition-colors ${
+              active
+                ? "border-[var(--color-oxblood)] bg-[var(--color-paper-deep)]"
+                : "border-[var(--color-hairline)] hover:border-[var(--color-ink-soft)]"
+            }`}
+          >
+            <div className={`font-display text-sm ${active ? "text-[var(--color-oxblood)]" : ""}`}>{opt.title}</div>
+            <div className="mt-1 text-[var(--color-ink-soft)]">{opt.sub}</div>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -194,29 +249,6 @@ function BuildStages({ stage }: { stage: PdfBuildStage | "ready" }) {
         </div>
       ))}
     </div>
-  );
-}
-
-function PdfPostForm({ pdf, mode }: { pdf: BuiltPdf; mode: "attachment" | "inline" }) {
-  const isDownload = mode === "attachment";
-
-  return (
-    <form action="/api/download-pdf" method="post" target={isDownload ? undefined : "_blank"}>
-      <input type="hidden" name="filename" value={pdf.filename} />
-      <input type="hidden" name="mode" value={mode} />
-      <input type="hidden" name="base64" value={pdf.base64} />
-      <button
-        type="submit"
-        className={`inline-flex h-10 items-center gap-2 rounded-sm px-4 text-sm ${
-          isDownload
-            ? "bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
-            : "border border-[var(--color-hairline)] text-[var(--color-ink)] hover:bg-[var(--color-paper-deep)]"
-        }`}
-      >
-        {isDownload ? <Download className="h-4 w-4" /> : <Printer className="h-4 w-4" />}
-        {isDownload ? `Download ${pdf.filename}` : "Open printable PDF"}
-      </button>
-    </form>
   );
 }
 

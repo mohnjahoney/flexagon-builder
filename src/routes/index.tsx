@@ -28,6 +28,7 @@ function Index() {
   const [face2, setFace2] = useState<string | null>(cat2);
   const [face3, setFace3] = useState<string | null>(cat3);
   const [layout, setLayout] = useState<PrintLayout>("double-sided");
+  const [includeInstructions, setIncludeInstructions] = useState(true);
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<BuiltPdf | null>(null);
   const [stage, setStage] = useState<PdfBuildStage | "ready" | null>(null);

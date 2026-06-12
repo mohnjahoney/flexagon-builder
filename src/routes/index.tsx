@@ -152,6 +152,70 @@ function Row({ label, present }: { label: string; present: boolean }) {
   );
 }
 
+function BuildStages({ stage }: { stage: PdfBuildStage | "ready" }) {
+  const stages: Array<{ id: PdfBuildStage | "ready"; label: string }> = [
+    { id: "rendering-strip", label: "Render strip" },
+    { id: "assembling-pages", label: "Assemble pages" },
+    { id: "encoding-file", label: "Encode file" },
+    { id: "ready", label: "Ready" },
+  ];
+  const activeIndex = stages.findIndex((item) => item.id === stage);
+
+  return (
+    <div className="grid grid-cols-2 gap-2 border-t border-[var(--color-hairline)] pt-4 text-xs md:grid-cols-4">
+      {stages.map((item, index) => (
+        <div key={item.id} className="flex items-center gap-2 text-[var(--color-ink-soft)]">
+          <span
+            className={`grid h-5 w-5 place-items-center rounded-full border text-[10px] ${
+              index <= activeIndex
+                ? "border-[var(--color-oxblood)] bg-[var(--color-oxblood)] text-[var(--color-paper)]"
+                : "border-[var(--color-hairline)]"
+            }`}
+          >
+            {index < activeIndex || stage === "ready" ? "✓" : index + 1}
+          </span>
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PdfPostForm({ pdf, mode }: { pdf: BuiltPdf; mode: "attachment" | "inline" }) {
+  const isDownload = mode === "attachment";
+
+  return (
+    <form action="/api/download-pdf" method="post" target={isDownload ? undefined : "_blank"}>
+      <input type="hidden" name="filename" value={pdf.filename} />
+      <input type="hidden" name="mode" value={mode} />
+      <input type="hidden" name="base64" value={pdf.base64} />
+      <button
+        type="submit"
+        className={`inline-flex h-10 items-center gap-2 rounded-sm px-4 text-sm ${
+          isDownload
+            ? "bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
+            : "border border-[var(--color-hairline)] text-[var(--color-ink)] hover:bg-[var(--color-paper-deep)]"
+        }`}
+      >
+        {isDownload ? <Download className="h-4 w-4" /> : <Printer className="h-4 w-4" />}
+        {isDownload ? `Download ${pdf.filename}` : "Open printable PDF"}
+      </button>
+    </form>
+  );
+}
+
+function ProofPage({ label, src }: { label: string; src: string }) {
+  return (
+    <figure className="border border-[var(--color-hairline)] bg-[var(--color-paper-deep)] p-3">
+      <div className="mb-2 flex items-center gap-2 text-xs text-[var(--color-ink-soft)]">
+        <FileCheck2 className="h-4 w-4 text-[var(--color-oxblood)]" />
+        <figcaption>{label}</figcaption>
+      </div>
+      <img src={src} alt={`${label} proof`} className="w-full bg-[var(--color-paper)]" />
+    </figure>
+  );
+}
+
 function Header() {
   return (
     <header className="border-b border-[var(--color-hairline)]">

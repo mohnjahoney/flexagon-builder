@@ -49,7 +49,7 @@ function Index() {
     setBusy(true);
     setStage("rendering-strip");
     try {
-      const built = await buildFlexagonPdf(faces, { layout }, setStage);
+      const built = await buildFlexagonPdf(faces, { layout, includeInstructions }, setStage);
       setPdf((prev) => {
         if (prev?.url) URL.revokeObjectURL(prev.url);
         return built;

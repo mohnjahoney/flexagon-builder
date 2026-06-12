@@ -49,6 +49,16 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+async function loadOptionalImage(src: string | null): Promise<HTMLImageElement | null> {
+  if (!src) return null;
+  try {
+    return await loadImage(src);
+  } catch (err) {
+    console.warn("[flexagon] image could not be loaded; using a printed placeholder", src, err);
+    return null;
+  }
+}
+
 function drawSheetChrome(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -271,9 +281,9 @@ export async function renderSheets(
   const margin = MARGIN_IN * dpi;
 
   const [img1, img2, img3] = await Promise.all([
-    faces.face1 ? loadImage(faces.face1) : Promise.resolve(null),
-    faces.face2 ? loadImage(faces.face2) : Promise.resolve(null),
-    faces.face3 ? loadImage(faces.face3) : Promise.resolve(null),
+    loadOptionalImage(faces.face1),
+    loadOptionalImage(faces.face2),
+    loadOptionalImage(faces.face3),
   ]);
   const imgs = { 1: img1, 2: img2, 3: img3 } as const;
   const fills = { 1: "#efe6d4", 2: "#e8dfca", 3: "#e1d6bc" } as const;

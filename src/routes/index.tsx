@@ -7,9 +7,9 @@ import { FlexagonPreview } from "@/components/flexagon/FlexagonPreview";
 import { buildFlexagonPdf, type BuiltPdf, type PdfBuildStage } from "@/lib/flexagon/pdf";
 import type { PrintLayout } from "@/lib/flexagon/render";
 import { toast } from "sonner";
-import cat1 from "@/assets/cat1.jpg.asset.json";
-import cat2 from "@/assets/cat2.jpg.asset.json";
-import cat3 from "@/assets/cat3.jpg.asset.json";
+import cat1 from "@/assets/test-cat-1.jpg";
+import cat2 from "@/assets/test-cat-2.jpg";
+import cat3 from "@/assets/test-cat-3.jpg";
 
 type SaveFilePickerWindow = Window & {
   showSaveFilePicker?: (options?: {
@@ -31,9 +31,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [face1, setFace1] = useState<string | null>(cat1.url);
-  const [face2, setFace2] = useState<string | null>(cat2.url);
-  const [face3, setFace3] = useState<string | null>(cat3.url);
+  const [face1, setFace1] = useState<string | null>(cat1);
+  const [face2, setFace2] = useState<string | null>(cat2);
+  const [face3, setFace3] = useState<string | null>(cat3);
   const [layout, setLayout] = useState<PrintLayout>("double-sided");
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<BuiltPdf | null>(null);

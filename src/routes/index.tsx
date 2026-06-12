@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, FileCheck2, Loader2, Printer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacePicker } from "@/components/flexagon/FacePicker";
@@ -7,9 +7,9 @@ import { FlexagonPreview } from "@/components/flexagon/FlexagonPreview";
 import { buildFlexagonPdf, type BuiltPdf, type PdfBuildStage } from "@/lib/flexagon/pdf";
 import type { PrintLayout } from "@/lib/flexagon/render";
 import { toast } from "sonner";
-import cat1 from "@/assets/cat1.jpg.asset.json";
-import cat2 from "@/assets/cat2.jpg.asset.json";
-import cat3 from "@/assets/cat3.jpg.asset.json";
+import cat1 from "@/assets/test-cat-1.jpg";
+import cat2 from "@/assets/test-cat-2.jpg";
+import cat3 from "@/assets/test-cat-3.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,9 +24,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [face1, setFace1] = useState<string | null>(cat1.url);
-  const [face2, setFace2] = useState<string | null>(cat2.url);
-  const [face3, setFace3] = useState<string | null>(cat3.url);
+  const [face1, setFace1] = useState<string | null>(cat1);
+  const [face2, setFace2] = useState<string | null>(cat2);
+  const [face3, setFace3] = useState<string | null>(cat3);
   const [layout, setLayout] = useState<PrintLayout>("double-sided");
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<BuiltPdf | null>(null);
@@ -62,6 +62,19 @@ function Index() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function openPdfInNewTab(built: BuiltPdf) {
+    const opened = window.open("", "_blank");
+    if (!opened) {
+      toast.error("The preview blocked the new tab. The PDF file is still ready to save locally.");
+      return;
+    }
+
+    opened.opener = null;
+    const safeName = built.filename.replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c] ?? c);
+    opened.document.write(`<!doctype html><html><head><title>${safeName}</title><style>html,body{margin:0;height:100%;background:#faf7ef;font-family:system-ui,sans-serif}.bar{height:44px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#2a2117;color:#faf7ef}.bar a{color:#faf7ef}embed{display:block;width:100%;height:calc(100% - 44px);border:0}</style></head><body><div class="bar"><strong>${safeName}</strong><a href="${built.dataUrl}" download="${safeName}">Download</a></div><embed src="${built.dataUrl}" type="application/pdf" /></body></html>`);
+    opened.document.close();
   }
 
   return (
@@ -142,20 +155,20 @@ function Index() {
                 <a
                   href={pdf.url}
                   download={pdf.filename}
+                  onClick={() => toast.message("Download requested. If Lovable's preview blocks it, this same link works when run locally.")}
                   className="inline-flex h-10 items-center gap-2 rounded-sm bg-[var(--color-ink)] px-4 text-sm text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
                 >
                   <Download className="h-4 w-4" />
                   Download {pdf.filename}
                 </a>
-                <a
-                  href={pdf.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => openPdfInNewTab(pdf)}
                   className="inline-flex h-10 items-center gap-2 rounded-sm border border-[var(--color-hairline)] px-4 text-sm text-[var(--color-ink)] hover:bg-[var(--color-paper-deep)]"
                 >
                   <Printer className="h-4 w-4" />
                   Open in new tab
-                </a>
+                </button>
               </div>
             </div>
             <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">

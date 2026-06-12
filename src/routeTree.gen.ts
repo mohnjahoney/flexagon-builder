@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as HowToFoldRouteImport } from './routes/how-to-fold'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiDownloadPdfRouteImport } from './routes/api/download-pdf'
 
 const HowToFoldRoute = HowToFoldRouteImport.update({
   id: '/how-to-fold',
@@ -28,35 +29,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDownloadPdfRoute = ApiDownloadPdfRouteImport.update({
+  id: '/api/download-pdf',
+  path: '/api/download-pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/how-to-fold': typeof HowToFoldRoute
+  '/api/download-pdf': typeof ApiDownloadPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/how-to-fold': typeof HowToFoldRoute
+  '/api/download-pdf': typeof ApiDownloadPdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/how-to-fold': typeof HowToFoldRoute
+  '/api/download-pdf': typeof ApiDownloadPdfRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/how-to-fold'
+  fullPaths: '/' | '/about' | '/how-to-fold' | '/api/download-pdf'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/how-to-fold'
-  id: '__root__' | '/' | '/about' | '/how-to-fold'
+  to: '/' | '/about' | '/how-to-fold' | '/api/download-pdf'
+  id: '__root__' | '/' | '/about' | '/how-to-fold' | '/api/download-pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   HowToFoldRoute: typeof HowToFoldRoute
+  ApiDownloadPdfRoute: typeof ApiDownloadPdfRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/download-pdf': {
+      id: '/api/download-pdf'
+      path: '/api/download-pdf'
+      fullPath: '/api/download-pdf'
+      preLoaderRoute: typeof ApiDownloadPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,7 +106,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   HowToFoldRoute: HowToFoldRoute,
+  ApiDownloadPdfRoute: ApiDownloadPdfRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

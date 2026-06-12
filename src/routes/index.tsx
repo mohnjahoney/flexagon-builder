@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Download, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacePicker } from "@/components/flexagon/FacePicker";
 import { FlexagonPreview } from "@/components/flexagon/FlexagonPreview";
-import { buildAndSaveFlexagonPdf } from "@/lib/flexagon/pdf";
+import { buildFlexagonPdf, type BuiltPdf } from "@/lib/flexagon/pdf";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -24,14 +24,27 @@ function Index() {
   const [face2, setFace2] = useState<string | null>(null);
   const [face3, setFace3] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pdf, setPdf] = useState<BuiltPdf | null>(null);
 
   const hasAny = !!(face1 || face2 || face3);
   const hasAll = !!(face1 && face2 && face3);
 
-  async function download() {
+  // Revoke the previous object URL whenever we build a new one or unmount.
+  useEffect(() => {
+    return () => {
+      if (pdf) URL.revokeObjectURL(pdf.url);
+    };
+  }, [pdf]);
+
+  async function build() {
     setBusy(true);
     try {
-      await buildAndSaveFlexagonPdf({ face1, face2, face3 }, "hexaflexagon.pdf");
+      const built = await buildFlexagonPdf({ face1, face2, face3 }, "hexaflexagon.pdf");
+      setPdf((prev) => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return built;
+      });
+      toast.success(`PDF ready — ${(built.sizeBytes / 1024).toFixed(0)} KB`);
     } catch (err) {
       console.error("[flexagon] PDF generation failed:", err);
       toast.error("Sorry — the PDF could not be generated. Check the console for details.");
@@ -61,16 +74,16 @@ function Index() {
         <FacePicker numeral="III" caption="the hidden third face" value={face3} onChange={setFace3} />
       </section>
 
-      <section className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 px-6 pb-24 md:grid-cols-[1.1fr_1fr]">
+      <section className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 px-6 pb-10 md:grid-cols-[1.1fr_1fr]">
         <FlexagonPreview faces={{ face1, face2, face3 }} />
 
         <div className="sheet flex flex-col gap-6 p-8">
           <div>
             <span className="label-eyebrow">Step the last</span>
-            <h2 className="mt-2 font-display text-3xl">Print the template</h2>
+            <h2 className="mt-2 font-display text-3xl">Build the template</h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--color-ink-soft)]">
-              The PDF prints across two landscape sheets — front and back — followed by a folding broadside.
-              Cut along the solid line, crease every dashed line, fold into thirds, glue the marked tab.
+              We compose the PDF here in your browser and hand it back to you. Inspect it page by page below, then save
+              or open it in a new tab to print.
             </p>
           </div>
           <div className="space-y-2 border-t border-[var(--color-hairline)] pt-5">
@@ -80,12 +93,20 @@ function Index() {
           </div>
 
           <Button
-            onClick={download}
+            onClick={build}
             disabled={busy}
             className="mt-2 h-12 w-full rounded-sm bg-[var(--color-oxblood)] text-[var(--color-paper)] hover:bg-[var(--color-oxblood)]/90"
           >
-            {busy ? <Loader2 className="animate-spin" /> : <Download />}
-            {hasAll ? "Download PDF template" : hasAny ? "Download — placeholders for missing faces" : "Download — blank template"}
+            {busy ? <Loader2 className="animate-spin" /> : pdf ? <RefreshCw /> : <Download />}
+            {busy
+              ? "Composing…"
+              : pdf
+                ? "Rebuild PDF"
+                : hasAll
+                  ? "Build PDF template"
+                  : hasAny
+                    ? "Build — placeholders for missing faces"
+                    : "Build — blank template"}
           </Button>
 
           <Link to="/how-to-fold" className="text-center text-xs text-[var(--color-ink-soft)] underline-offset-4 hover:underline">
@@ -93,6 +114,49 @@ function Index() {
           </Link>
         </div>
       </section>
+
+      {pdf && (
+        <section className="mx-auto max-w-6xl px-6 pb-24">
+          <div className="sheet flex flex-col gap-4 p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <span className="label-eyebrow">PDF · ready</span>
+                <h3 className="mt-1 font-display text-2xl">Inspect &amp; save</h3>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={pdf.url}
+                  download={pdf.filename}
+                  className="inline-flex h-10 items-center gap-2 rounded-sm bg-[var(--color-ink)] px-4 text-sm text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
+                >
+                  <Download className="h-4 w-4" />
+                  Download {pdf.filename}
+                </a>
+                <a
+                  href={pdf.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-10 items-center gap-2 rounded-sm border border-[var(--color-hairline)] px-4 text-sm text-[var(--color-ink)] hover:bg-[var(--color-paper-deep)]"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in new tab
+                </a>
+              </div>
+            </div>
+            <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
+              If the download button doesn't trigger (some sandboxed previews block it), the "Open in new tab" link
+              always works — your browser's PDF viewer has its own save button.
+            </p>
+            <div className="h-[80vh] w-full overflow-hidden rounded-sm border border-[var(--color-hairline)] bg-[var(--color-paper-deep)]">
+              <iframe
+                title="Flexagon PDF preview"
+                src={pdf.url}
+                className="h-full w-full"
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       <Footer />
     </main>

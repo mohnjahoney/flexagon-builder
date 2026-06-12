@@ -56,9 +56,8 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
 
   return (
     <div className="sheet relative flex flex-col gap-4 p-6">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-center">
         <span className="roman-numeral text-3xl leading-none">{numeral}</span>
-        <span className="label-eyebrow">Face</span>
       </div>
 
       {/* Pointy-top regular hexagon: w/h = √3/2 ≈ 0.866 */}
@@ -89,8 +88,6 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
         )}
       </div>
 
-      <p className="font-display text-center text-sm italic text-[var(--color-ink-soft)]">{caption}</p>
-
       <div className="flex flex-wrap justify-center gap-2">
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
         <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
@@ -99,11 +96,9 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
         <Button variant="outline" size="sm" onClick={() => setCamOpen(true)}>
           <Camera /> Camera
         </Button>
-        {value && (
-          <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
-            <RefreshCw /> Reset
-          </Button>
-        )}
+        <Button variant="outline" size="sm" onClick={fetchCat} disabled={catBusy} title="Fetch a random cat from cataas.com">
+          {catBusy ? <Loader2 className="animate-spin" /> : <Cat />} Cats
+        </Button>
       </div>
 
       <HexCropper

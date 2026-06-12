@@ -98,7 +98,7 @@ export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) 
         </DialogHeader>
         <div
           ref={stageRef}
-          className="relative mx-auto h-[420px] w-[420px] cursor-grab active:cursor-grabbing select-none overflow-hidden bg-[oklch(0.945_0.014_82)]"
+          className="relative mx-auto h-[460px] w-[398px] cursor-grab active:cursor-grabbing select-none overflow-hidden bg-[oklch(0.945_0.014_82)]"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

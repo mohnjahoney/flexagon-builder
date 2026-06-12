@@ -1,20 +1,22 @@
 import { jsPDF } from "jspdf";
 import { renderSheets, type FaceImages } from "./render";
 
-export async function buildFlexagonPdf(faces: FaceImages): Promise<Blob> {
+export async function buildAndSaveFlexagonPdf(faces: FaceImages, filename = "hexaflexagon.pdf"): Promise<void> {
   const { front, back } = await renderSheets(faces);
   const pdf = new jsPDF({ orientation: "landscape", unit: "in", format: "letter" });
   const W = 11, H = 8.5;
 
-  pdf.addImage(front.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, W, H);
+  pdf.addImage(front.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, W, H);
   pdf.addPage("letter", "landscape");
-  pdf.addImage(back.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, W, H);
+  pdf.addImage(back.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, W, H);
 
-  // Page 3 — folding instructions
   pdf.addPage("letter", "portrait");
   drawInstructions(pdf);
 
-  return pdf.output("blob");
+  // jsPDF.save handles the download internally — works inside sandboxed
+  // iframes that allow downloads, and avoids issues with manually constructed
+  // anchor clicks on very large blob URLs.
+  pdf.save(filename);
 }
 
 function drawInstructions(pdf: jsPDF) {
@@ -39,9 +41,9 @@ function drawInstructions(pdf: jsPDF) {
   const steps = [
     "I.  Cut around the solid outline of the strip. Discard the surrounding paper.",
     "II. Crease every dashed fold line firmly in both directions, then flatten the strip again.",
-    "III. With Face I (front) toward you, fold the strip so the back-side wedges marked II and III come together. After the first folds you will have a shorter zig-zag.",
-    "IV. Continue folding into thirds until you are left with a hexagon that shows Face I.",
-    "V.  Apply a small amount of glue to the tab marked on the back and press it onto the corresponding triangle. Let it dry.",
+    "III. With Face I (front) toward you, fold the strip so the back-side wedges marked II and III come together.",
+    "IV. Continue folding into thirds until you are left with a hexagon showing Face I.",
+    "V.  Apply a small amount of glue to the tab marked on the back and press it onto the corresponding triangle. Let dry.",
     "VI. To flex: pinch two adjacent triangles upward into a peak, then push the opposite side down and open the hexagon from the centre. A new face appears.",
   ];
   let y = 2.3;

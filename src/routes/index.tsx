@@ -4,7 +4,8 @@ import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacePicker } from "@/components/flexagon/FacePicker";
 import { FlexagonPreview } from "@/components/flexagon/FlexagonPreview";
-import { buildFlexagonPdf } from "@/lib/flexagon/pdf";
+import { buildAndSaveFlexagonPdf } from "@/lib/flexagon/pdf";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,15 +31,10 @@ function Index() {
   async function download() {
     setBusy(true);
     try {
-      const blob = await buildFlexagonPdf({ face1, face2, face3 });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "hexaflexagon.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      await buildAndSaveFlexagonPdf({ face1, face2, face3 }, "hexaflexagon.pdf");
+    } catch (err) {
+      console.error("[flexagon] PDF generation failed:", err);
+      toast.error("Sorry — the PDF could not be generated. Check the console for details.");
     } finally {
       setBusy(false);
     }

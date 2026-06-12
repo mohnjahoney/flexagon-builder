@@ -1,24 +1,43 @@
-// Compose the printable front and back of the trihexaflexagon strip.
+// Compose the printable trihexaflexagon strip(s).
+//
+// Two layouts:
+//   - "double-sided"  : two pages (front, back). Standard double-sided printing.
+//   - "single-sided"  : one page. Front strip + back strip stacked, long edges
+//                       aligned, so the user cuts a single double-wide strip
+//                       and folds it in half.
+//
+// Always landscape US-letter with a 0.5" margin all round. Front and back have
+// the identical silhouette: a parallelogram of 10 equilateral triangles plus
+// one half-triangle glue tab on the trailing edge.
 
-import { STRIP, stripBounds, triangleVertices, hexWedge, type Point } from "./geometry";
+import { STRIP, triangleVertices, type Point } from "./geometry";
 
 export interface FaceImages {
-  /** dataURL or ObjectURL for each face. May be null if user hasn't picked yet. */
   face1: string | null;
   face2: string | null;
   face3: string | null;
 }
 
-const DPI = 300;
+export type PrintLayout = "single-sided" | "double-sided";
+
+export interface RenderOptions {
+  dpi?: number; // default 600
+  layout?: PrintLayout; // default "double-sided"
+}
+
 const PAGE_W_IN = 11; // landscape letter
 const PAGE_H_IN = 8.5;
 const MARGIN_IN = 0.5;
+const SQRT3 = Math.sqrt(3);
 
 export interface RenderedSheets {
-  front: HTMLCanvasElement;
-  back: HTMLCanvasElement;
+  pages: HTMLCanvasElement[];
+  /** small preview canvases (one per page) for the on-screen proof */
+  previews: HTMLCanvasElement[];
   widthPx: number;
   heightPx: number;
+  layout: PrintLayout;
+  dpi: number;
 }
 
 async function loadImage(src: string): Promise<HTMLImageElement> {
@@ -31,28 +50,28 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function drawSheetChrome(ctx: CanvasRenderingContext2D, w: number, h: number, label: string) {
-  // Paper tone
+function drawSheetChrome(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  label: string,
+  dpi: number,
+) {
   ctx.fillStyle = "#faf7ef";
   ctx.fillRect(0, 0, w, h);
 
-  // Faint margin rule
-  ctx.strokeStyle = "rgba(120,110,95,0.35)";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([2, 4]);
-  const m = MARGIN_IN * DPI;
+  // very faint margin guide
+  ctx.strokeStyle = "rgba(120,110,95,0.22)";
+  ctx.lineWidth = Math.max(1, dpi / 300);
+  ctx.setLineDash([dpi / 50, dpi / 25]);
+  const m = MARGIN_IN * dpi;
   ctx.strokeRect(m, m, w - 2 * m, h - 2 * m);
   ctx.setLineDash([]);
 
-  // Header
-  ctx.fillStyle = "#332b22";
-  ctx.font = `500 ${0.18 * DPI}px "Fraunces", Georgia, serif`;
-  ctx.textBaseline = "top";
-  ctx.fillText("Hexaflexagon Atelier", m, m - 0.32 * DPI);
-
-  ctx.font = `400 ${0.11 * DPI}px "Inter Tight", system-ui, sans-serif`;
   ctx.fillStyle = "#6a5f50";
-  ctx.fillText(label.toUpperCase(), m + 3.4 * DPI, m - 0.28 * DPI);
+  ctx.font = `400 ${0.1 * dpi}px "Inter Tight", system-ui, sans-serif`;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(label.toUpperCase(), m, m - 0.12 * dpi);
 }
 
 function clipPolygon(ctx: CanvasRenderingContext2D, pts: Point[]) {
@@ -63,22 +82,6 @@ function clipPolygon(ctx: CanvasRenderingContext2D, pts: Point[]) {
   ctx.clip();
 }
 
-function strokePolygon(ctx: CanvasRenderingContext2D, pts: Point[], dashed = false) {
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-  ctx.closePath();
-  if (dashed) ctx.setLineDash([6, 6]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-}
-
-/**
- * Draw one strip triangle filled with a wedge of the corresponding face image.
- * Strategy: clip to triangle, then draw the source image inside the triangle's
- * bounding box, transformed so that the wedge of the source hexagon roughly
- * aligns with this triangle's orientation.
- */
 function drawTriangleWedge(
   ctx: CanvasRenderingContext2D,
   pts: [Point, Point, Point],
@@ -86,23 +89,17 @@ function drawTriangleWedge(
   wedgeIndex: number,
   faceLabel: string,
   fallbackFill: string,
+  dpi: number,
 ) {
   ctx.save();
   clipPolygon(ctx, pts);
 
-  // Triangle bounding box
   const xs = pts.map((p) => p.x);
   const ys = pts.map((p) => p.y);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const tw = maxX - minX;
-  const th = maxY - minY;
+  const tw = Math.max(...xs) - Math.min(...xs);
+  const th = Math.max(...ys) - Math.min(...ys);
 
   if (img) {
-    // Place image so its center sits over the triangle centroid,
-    // scaled to slightly more than cover the triangle bbox, and
-    // rotated by 60° * wedgeIndex so consecutive wedges of the same
-    // face show consecutive sectors of the source image.
     const cx = (pts[0].x + pts[1].x + pts[2].x) / 3;
     const cy = (pts[0].y + pts[1].y + pts[2].y) / 3;
     const cover = Math.max(tw, th) * 2.4;
@@ -114,42 +111,164 @@ function drawTriangleWedge(
     ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
   } else {
     ctx.fillStyle = fallbackFill;
-    ctx.fillRect(minX, minY, tw, th);
+    ctx.fillRect(Math.min(...xs), Math.min(...ys), tw, th);
   }
   ctx.restore();
 
-  // Subtle face label in the triangle centroid
   const cx = (pts[0].x + pts[1].x + pts[2].x) / 3;
   const cy = (pts[0].y + pts[1].y + pts[2].y) / 3;
   ctx.save();
   ctx.fillStyle = "rgba(250,247,239,0.78)";
   ctx.beginPath();
-  ctx.arc(cx, cy, 0.12 * DPI, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 0.1 * dpi, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "#46362a";
-  ctx.font = `500 ${0.14 * DPI}px "Fraunces", Georgia, serif`;
+  ctx.font = `500 ${0.12 * dpi}px "Fraunces", Georgia, serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(faceLabel, cx, cy + 0.005 * DPI);
+  ctx.fillText(faceLabel, cx, cy + 0.005 * dpi);
   ctx.restore();
 }
 
-export async function renderSheets(faces: FaceImages): Promise<RenderedSheets> {
-  const W = Math.round(PAGE_W_IN * DPI);
-  const H = Math.round(PAGE_H_IN * DPI);
+function romanFor(face: number) {
+  return face === 1 ? "I" : face === 2 ? "II" : "III";
+}
 
-  const front = document.createElement("canvas");
-  front.width = W;
-  front.height = H;
-  const back = document.createElement("canvas");
-  back.width = W;
-  back.height = H;
+/** Outline of a strip: parallelogram of 10 triangles + half-triangle glue tab on the right. */
+function drawStripOutline(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  ox: number,
+  oy: number,
+  dpi: number,
+) {
+  const h = (s * SQRT3) / 2;
+  ctx.strokeStyle = "#2a2117";
+  ctx.lineWidth = Math.max(1.5, dpi / 250);
+  ctx.lineJoin = "miter";
+  // Parallelogram (10 triangles) + half-triangle tab on the right.
+  // Parallelogram: top from (ox + s/2, oy) length 5s; bottom from (ox, oy+h) length 5s.
+  // Half-triangle tab: extends from (ox + 5s + s/2, oy) down to (ox + 5.5s, oy+h).
+  ctx.beginPath();
+  ctx.moveTo(ox, oy + h);
+  ctx.lineTo(ox + s / 2, oy);
+  ctx.lineTo(ox + s / 2 + 5 * s, oy); // top: parallelogram + nothing extra above
+  // diagonal down-right of half-tab
+  ctx.lineTo(ox + 5.5 * s + s / 2, oy + h);
+  ctx.lineTo(ox + 5 * s, oy + h);
+  ctx.closePath();
+  ctx.stroke();
+}
 
-  const fctx = front.getContext("2d")!;
-  const bctx = back.getContext("2d")!;
+function drawFoldLines(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  ox: number,
+  oy: number,
+  dpi: number,
+) {
+  ctx.strokeStyle = "#7a3b2c";
+  ctx.lineWidth = Math.max(0.8, dpi / 500);
+  ctx.setLineDash([dpi / 40, dpi / 60]);
+  const h = (s * SQRT3) / 2;
+  for (let i = 1; i < 10; i++) {
+    const apexUp = i % 2 === 0;
+    const xMid = ox + (i * s) / 2;
+    ctx.beginPath();
+    if (apexUp) {
+      ctx.moveTo(xMid + s / 2, oy);
+      ctx.lineTo(xMid, oy + h);
+    } else {
+      ctx.moveTo(xMid, oy);
+      ctx.lineTo(xMid + s / 2, oy + h);
+    }
+    ctx.stroke();
+  }
+  // fold line separating the half-tab from triangle 10
+  ctx.beginPath();
+  ctx.moveTo(ox + 5 * s + s / 2, oy);
+  ctx.lineTo(ox + 5 * s, oy + h);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
 
-  drawSheetChrome(fctx, W, H, "Front · cut along solid lines");
-  drawSheetChrome(bctx, W, H, "Back · glue tab 10 to tab 1");
+function drawHalfTab(
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  ox: number,
+  oy: number,
+  dpi: number,
+) {
+  const h = (s * SQRT3) / 2;
+  ctx.save();
+  ctx.fillStyle = "rgba(122,59,44,0.10)";
+  ctx.beginPath();
+  ctx.moveTo(ox + 5 * s + s / 2, oy);
+  ctx.lineTo(ox + 5.5 * s + s / 2, oy + h);
+  ctx.lineTo(ox + 5 * s, oy + h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#7a3b2c";
+  ctx.font = `500 ${0.11 * dpi}px "Fraunces", Georgia, serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("glue", ox + 5.25 * s + s / 4, oy + h * 0.55);
+  ctx.restore();
+}
+
+/** Render a single strip (front or back) at origin (ox, oy) on `ctx`. */
+function drawStrip(
+  ctx: CanvasRenderingContext2D,
+  side: "front" | "back",
+  s: number,
+  ox: number,
+  oy: number,
+  imgs: Record<1 | 2 | 3, HTMLImageElement | null>,
+  fills: Record<1 | 2 | 3, string>,
+  dpi: number,
+) {
+  for (const t of STRIP) {
+    const mirror = side === "back";
+    const v = triangleVertices(t.index, s, ox, oy, mirror);
+    const face = side === "front" ? t.frontFace : t.backFace;
+    const wedge = side === "front" ? t.frontWedge : t.backWedge;
+    drawTriangleWedge(ctx, v, imgs[face], wedge, romanFor(face), fills[face], dpi);
+  }
+  drawStripOutline(ctx, s, ox, oy, dpi);
+  drawFoldLines(ctx, s, ox, oy, dpi);
+  drawHalfTab(ctx, s, ox, oy, dpi);
+}
+
+/** Compute strip edge length `s` that maximises a single-strip-tall layout
+ *  on the page after margins. Returns also strip dimensions. */
+function fitSingleStrip(pageW: number, pageH: number, margin: number) {
+  const usableW = pageW - 2 * margin;
+  const usableH = pageH - 2 * margin;
+  // strip is 5.5s + s/2 = 6s wide (including tab), 0.866s tall
+  const sByW = usableW / 6;
+  const sByH = usableH / (SQRT3 / 2);
+  return Math.min(sByW, sByH);
+}
+
+function fitDoubleStrip(pageW: number, pageH: number, margin: number) {
+  const usableW = pageW - 2 * margin;
+  const usableH = pageH - 2 * margin;
+  // two strips stacked: 6s wide, 2*0.866s tall (sharing long edge → still 2h, no overlap)
+  const sByW = usableW / 6;
+  const sByH = usableH / SQRT3;
+  return Math.min(sByW, sByH);
+}
+
+export async function renderSheets(
+  faces: FaceImages,
+  opts: RenderOptions = {},
+): Promise<RenderedSheets> {
+  const dpi = opts.dpi ?? 600;
+  const layout: PrintLayout = opts.layout ?? "double-sided";
+
+  const W = Math.round(PAGE_W_IN * dpi);
+  const H = Math.round(PAGE_H_IN * dpi);
+  const margin = MARGIN_IN * dpi;
 
   const [img1, img2, img3] = await Promise.all([
     faces.face1 ? loadImage(faces.face1) : Promise.resolve(null),
@@ -159,118 +278,75 @@ export async function renderSheets(faces: FaceImages): Promise<RenderedSheets> {
   const imgs = { 1: img1, 2: img2, 3: img3 } as const;
   const fills = { 1: "#efe6d4", 2: "#e8dfca", 3: "#e1d6bc" } as const;
 
-  // Edge length sized to fit page comfortably
-  const s = 1.7 * DPI;
-  const { width: stripW, height: stripH } = stripBounds(s);
-  const ox = (W - stripW) / 2;
-  const oy = (H - stripH) / 2;
+  const pages: HTMLCanvasElement[] = [];
 
-  // FRONT
-  for (const t of STRIP) {
-    const v = triangleVertices(t.index, s, ox, oy);
-    drawTriangleWedge(fctx, v, imgs[t.frontFace], t.frontWedge, romanFor(t.frontFace), fills[t.frontFace]);
-  }
-  // Strong cut outline + dashed fold lines (front)
-  drawStripOutline(fctx, s, ox, oy);
-  drawFoldLines(fctx, s, ox, oy);
-  drawIndexNumbers(fctx, s, ox, oy);
+  if (layout === "double-sided") {
+    const s = fitSingleStrip(W, H, margin);
+    const stripW = 6 * s;
+    const stripH = (s * SQRT3) / 2;
+    const ox = (W - stripW) / 2;
+    const oy = (H - stripH) / 2;
 
-  // BACK — strip is mirrored left-right because we flip the paper over
-  for (const t of STRIP) {
-    const v = triangleVertices(t.index, s, ox, oy, true);
-    drawTriangleWedge(bctx, v, imgs[t.backFace], t.backWedge, romanFor(t.backFace), fills[t.backFace]);
-  }
-  drawStripOutline(bctx, s, ox, oy);
-  drawFoldLines(bctx, s, ox, oy);
-  drawGlueTabMark(bctx, s, ox, oy);
-
-  return { front, back, widthPx: W, heightPx: H };
-}
-
-function romanFor(face: number) {
-  return face === 1 ? "I" : face === 2 ? "II" : "III";
-}
-
-function drawStripOutline(ctx: CanvasRenderingContext2D, s: number, ox: number, oy: number) {
-  ctx.strokeStyle = "#2a2117";
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = "miter";
-  // outline = perimeter of all triangles unioned (a parallelogram-ish band)
-  const h = (s * Math.sqrt(3)) / 2;
-  ctx.beginPath();
-  ctx.moveTo(ox, oy + h);
-  ctx.lineTo(ox + s / 2, oy);
-  // zig-zag top
-  for (let i = 1; i < 10; i += 2) {
-    const x = ox + ((i + 1) * s) / 2 + s / 2;
-    ctx.lineTo(x - s / 2, oy);
-  }
-  // actually a simpler outline: top is a flat line, bottom is flat line —
-  // since adjacent triangles share, the silhouette is a parallelogram.
-  ctx.closePath();
-  // Replace with the true parallelogram outline:
-  ctx.beginPath();
-  ctx.moveTo(ox, oy + h);
-  ctx.lineTo(ox + s / 2, oy);
-  ctx.lineTo(ox + s / 2 + 5 * s, oy);
-  ctx.lineTo(ox + 5.5 * s, oy + h);
-  ctx.lineTo(ox + s, oy + h);
-  ctx.closePath();
-  ctx.stroke();
-}
-
-function drawFoldLines(ctx: CanvasRenderingContext2D, s: number, ox: number, oy: number) {
-  ctx.strokeStyle = "#7a3b2c";
-  ctx.lineWidth = 1.1;
-  ctx.setLineDash([7, 5]);
-  const h = (s * Math.sqrt(3)) / 2;
-  // Internal shared edges between adjacent triangles — 9 of them
-  for (let i = 1; i < 10; i++) {
-    const apexUp = i % 2 === 0;
-    // shared edge between triangle i-1 and i
-    // triangle i-1 right vertex == triangle i left vertex; the shared edge
-    // alternates between rising and falling diagonals.
-    const xMid = ox + (i * s) / 2;
-    ctx.beginPath();
-    if (apexUp) {
-      // shared edge goes from (xMid - s/2, oy) down-right to (xMid, oy + h)
-      ctx.moveTo(xMid + s / 2, oy);
-      ctx.lineTo(xMid, oy + h);
-    } else {
-      ctx.moveTo(xMid, oy);
-      ctx.lineTo(xMid + s / 2, oy + h);
+    for (const side of ["front", "back"] as const) {
+      const cv = document.createElement("canvas");
+      cv.width = W;
+      cv.height = H;
+      const ctx = cv.getContext("2d")!;
+      drawSheetChrome(ctx, W, H, side === "front" ? "Front · cut along solid lines" : "Back · prints on the reverse", dpi);
+      drawStrip(ctx, side, s, ox, oy, imgs, fills, dpi);
+      pages.push(cv);
     }
+  } else {
+    // single-sided: front + back stacked vertically, long edges aligned
+    const s = fitDoubleStrip(W, H, margin);
+    const stripW = 6 * s;
+    const stripH = (s * SQRT3) / 2;
+    const totalH = 2 * stripH;
+    const ox = (W - stripW) / 2;
+    const oy = (H - totalH) / 2;
+
+    const cv = document.createElement("canvas");
+    cv.width = W;
+    cv.height = H;
+    const ctx = cv.getContext("2d")!;
+    drawSheetChrome(ctx, W, H, "Single sheet · cut around outline, fold along the centre seam", dpi);
+
+    // FRONT (top half)
+    drawStrip(ctx, "front", s, ox, oy, imgs, fills, dpi);
+    // BACK (bottom half) — same outline shape so the long edges line up exactly.
+    drawStrip(ctx, "back", s, ox, oy + stripH, imgs, fills, dpi);
+
+    // centre seam — fold line where the user folds the sheet in half
+    ctx.save();
+    ctx.strokeStyle = "#2a2117";
+    ctx.setLineDash([dpi / 25, dpi / 40]);
+    ctx.lineWidth = Math.max(1, dpi / 400);
+    ctx.beginPath();
+    ctx.moveTo(ox, oy + stripH);
+    ctx.lineTo(ox + stripW, oy + stripH);
     ctx.stroke();
-  }
-  ctx.setLineDash([]);
-}
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#6a5f50";
+    ctx.font = `400 ${0.1 * dpi}px "Inter Tight", system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText("fold here", ox + stripW / 2, oy + stripH - 0.08 * dpi);
+    ctx.restore();
 
-function drawIndexNumbers(ctx: CanvasRenderingContext2D, s: number, ox: number, oy: number) {
-  ctx.fillStyle = "rgba(46,36,26,0.55)";
-  ctx.font = `500 ${0.1 * 300}px "Inter Tight", system-ui, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  const h = (s * Math.sqrt(3)) / 2;
-  for (let i = 0; i < 10; i++) {
-    const cx = ox + (i * s) / 2 + s / 2;
-    const cy = i % 2 === 0 ? oy + h * 0.7 : oy + h * 0.3;
-    ctx.fillText(String(i + 1), cx, cy + h * 0.18);
+    pages.push(cv);
   }
-}
 
-function drawGlueTabMark(ctx: CanvasRenderingContext2D, s: number, ox: number, oy: number) {
-  const h = (s * Math.sqrt(3)) / 2;
-  ctx.fillStyle = "rgba(122,59,44,0.18)";
-  // triangle 10 region (last triangle on the back, which is mirrored — leftmost)
-  ctx.beginPath();
-  ctx.moveTo(ox, oy + h);
-  ctx.lineTo(ox + s, oy + h);
-  ctx.lineTo(ox + s / 2, oy);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = "#7a3b2c";
-  ctx.font = `500 ${0.13 * 300}px "Fraunces", Georgia, serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("glue tab", ox + s / 2, oy + h * 0.55);
+  // Downscaled previews for on-screen proof (keeps the DOM lightweight)
+  const previews = pages.map((page) => {
+    const pv = document.createElement("canvas");
+    const maxW = 1600;
+    const scale = Math.min(1, maxW / page.width);
+    pv.width = Math.round(page.width * scale);
+    pv.height = Math.round(page.height * scale);
+    const pctx = pv.getContext("2d")!;
+    pctx.imageSmoothingQuality = "high";
+    pctx.drawImage(page, 0, 0, pv.width, pv.height);
+    return pv;
+  });
+
+  return { pages, previews, widthPx: W, heightPx: H, layout, dpi };
 }

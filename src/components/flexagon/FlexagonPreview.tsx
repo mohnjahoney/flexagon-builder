@@ -78,9 +78,9 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
       <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
         Each face is sliced into six 60° wedges and scattered across the strip. When folded into thirds, the wedges
         recompose each hexagonal face.{" "}
-        <Link to="/how-to-fold" className="underline underline-offset-2 hover:text-[var(--color-ink)]">
-          Read the folding instructions →
-        </Link>
+        <a href="/how-to-fold" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[var(--color-ink)]">
+          Read the folding instructions ↗
+        </a>
       </p>
     </div>
   );

@@ -6,6 +6,7 @@ export type PdfBuildStage = "rendering-strip" | "assembling-pages" | "encoding-f
 export interface BuiltPdf {
   blob: Blob;
   url: string; // object URL — caller must revoke when done
+  dataUrl: string; // portable fallback for sandboxed preview/new-window handoff
   filename: string;
   sizeBytes: number;
   layout: PrintLayout;
@@ -55,10 +56,12 @@ export async function buildFlexagonPdf(
   onStage?.("encoding-file");
   const blob = pdf.output("blob");
   const url = URL.createObjectURL(blob);
+  const dataUrl = pdf.output("datauristring");
 
   return {
     blob,
     url,
+    dataUrl,
     filename,
     sizeBytes: blob.size,
     layout,

@@ -2,9 +2,8 @@
 //
 // Two layouts:
 //   - "double-sided"  : two pages (front, back). Standard double-sided printing.
-//   - "single-sided"  : one page. Front strip + back strip stacked, long edges
-//                       aligned, so the user cuts a single double-wide strip
-//                       and folds it in half.
+//   - "single-sided"  : one page. Front strip + 180°-rotated back strip stacked
+//                       so the true long edges meet for folding in half.
 //
 // Always landscape US-letter with a 0.5" margin all round. Front and back have
 // the identical silhouette: a parallelogram of 10 equilateral triangles plus
@@ -253,8 +252,9 @@ function fitSingleStrip(pageW: number, pageH: number, margin: number) {
 function fitDoubleStrip(pageW: number, pageH: number, margin: number) {
   const usableW = pageW - 2 * margin;
   const usableH = pageH - 2 * margin;
-  // two strips stacked: 6s wide, 2*0.866s tall (sharing long edge → still 2h, no overlap)
-  const sByW = usableW / 6;
+  // Rotating the bottom strip makes its glue tab protrude at the opposite end;
+  // reserve 7s total width so the full cut outline still keeps the 0.5" margin.
+  const sByW = usableW / 7;
   const sByH = usableH / SQRT3;
   return Math.min(sByW, sByH);
 }
@@ -297,12 +297,13 @@ export async function renderSheets(
       pages.push(cv);
     }
   } else {
-    // single-sided: front + back stacked vertically, long edges aligned
+    // single-sided: front + 180°-rotated back stacked vertically, long edges aligned
     const s = fitDoubleStrip(W, H, margin);
     const stripW = 6 * s;
     const stripH = (s * SQRT3) / 2;
     const totalH = 2 * stripH;
-    const ox = (W - stripW) / 2;
+    const combinedW = 7 * s;
+    const ox = (W - combinedW) / 2 + s;
     const oy = (H - totalH) / 2;
 
     const cv = document.createElement("canvas");
@@ -313,8 +314,13 @@ export async function renderSheets(
 
     // FRONT (top half)
     drawStrip(ctx, "front", s, ox, oy, imgs, fills, dpi);
-    // BACK (bottom half) — same outline shape so the long edges line up exactly.
+    // BACK (bottom half) — rotated around the shared long edge so the cut lines align.
+    ctx.save();
+    ctx.translate(ox + 2.5 * s, oy + stripH * 1.5);
+    ctx.rotate(Math.PI);
+    ctx.translate(-(ox + 2.5 * s), -(oy + stripH * 1.5));
     drawStrip(ctx, "back", s, ox, oy + stripH, imgs, fills, dpi);
+    ctx.restore();
 
     // centre seam — fold line where the user folds the sheet in half
     ctx.save();
@@ -323,7 +329,7 @@ export async function renderSheets(
     ctx.lineWidth = Math.max(1, dpi / 400);
     ctx.beginPath();
     ctx.moveTo(ox, oy + stripH);
-    ctx.lineTo(ox + stripW, oy + stripH);
+    ctx.lineTo(ox + 5 * s, oy + stripH);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = "#6a5f50";

@@ -38,7 +38,11 @@ export function FacePicker({ numeral, caption, value, onChange }: FacePickerProp
         <span className="label-eyebrow">Face</span>
       </div>
 
-      <div className="relative mx-auto aspect-square w-full max-w-[260px]">
+      {/* Pointy-top regular hexagon: w/h = √3/2 ≈ 0.866 */}
+      <div
+        className="relative mx-auto w-full max-w-[225px]"
+        style={{ aspectRatio: "0.8660254 / 1" }}
+      >
         <div
           className="absolute inset-0 bg-[var(--color-paper-deep)]"
           style={{

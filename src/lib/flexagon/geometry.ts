@@ -74,26 +74,24 @@ export function triangleVertices(
   mirror = false,
 ): [Point, Point, Point] {
   const h = (s * SQRT3) / 2;
-  const x0 = originX + (i * s) / 2;
-  // For a "back" layout, mirror across the vertical mid of the strip
-  // by inverting indices. Caller passes mirror=true and an originX that
-  // already accounts for the total strip width.
-  const xLeft = mirror ? originX + ((10 - i) * s) / 2 - s : x0;
+  const xLeft = originX + (i * s) / 2;
   const apexUp = i % 2 === 0;
-  if (apexUp) {
-    // base on bottom
-    return [
-      { x: xLeft, y: originY + h },
-      { x: xLeft + s, y: originY + h },
-      { x: xLeft + s / 2, y: originY },
-    ];
-  }
-  // apex down, base on top
-  return [
-    { x: xLeft, y: originY },
-    { x: xLeft + s, y: originY },
-    { x: xLeft + s / 2, y: originY + h },
-  ];
+  const verts: [Point, Point, Point] = apexUp
+    ? [
+        { x: xLeft, y: originY + h },
+        { x: xLeft + s, y: originY + h },
+        { x: xLeft + s / 2, y: originY },
+      ]
+    : [
+        { x: xLeft, y: originY },
+        { x: xLeft + s, y: originY },
+        { x: xLeft + s / 2, y: originY + h },
+      ];
+  if (!mirror) return verts;
+  // Reflect horizontally about the centre of the strip outline (width = 6s,
+  // including the half-triangle glue tab). Reflected x = 2*(originX + 3s) - x.
+  const axis = originX + 3 * s;
+  return verts.map((p) => ({ x: 2 * axis - p.x, y: p.y })) as [Point, Point, Point];
 }
 
 export interface Point {

@@ -11,13 +11,6 @@ import cat1 from "@/assets/test-cat-1.jpg";
 import cat2 from "@/assets/test-cat-2.jpg";
 import cat3 from "@/assets/test-cat-3.jpg";
 
-type SaveFilePickerWindow = Window & {
-  showSaveFilePicker?: (options?: {
-    suggestedName?: string;
-    types?: Array<{ description: string; accept: Record<string, string[]> }>;
-  }) => Promise<{ createWritable: () => Promise<{ write: (data: Blob) => Promise<void>; close: () => Promise<void> }> }>;
-};
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -69,34 +62,6 @@ function Index() {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function savePdf(built: BuiltPdf) {
-    const picker = (window as SaveFilePickerWindow).showSaveFilePicker;
-    if (picker) {
-      try {
-        const handle = await picker({
-          suggestedName: built.filename,
-          types: [{ description: "PDF", accept: { "application/pdf": [".pdf"] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(built.blob);
-        await writable.close();
-        toast.success("PDF saved.");
-        return;
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-      }
-    }
-
-    const a = document.createElement("a");
-    a.href = built.url;
-    a.download = built.filename;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    toast.message("Download requested. If the preview blocks it, the same build should save locally.");
   }
 
   function openPdfInNewTab(built: BuiltPdf) {
@@ -187,14 +152,15 @@ function Index() {
                 <h3 className="mt-1 font-display text-2xl">Inspect &amp; save</h3>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void savePdf(pdf)}
+                <a
+                  href={pdf.url}
+                  download={pdf.filename}
+                  onClick={() => toast.message("Download requested. If Lovable's preview blocks it, this same link works when run locally.")}
                   className="inline-flex h-10 items-center gap-2 rounded-sm bg-[var(--color-ink)] px-4 text-sm text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
                 >
                   <Download className="h-4 w-4" />
                   Download {pdf.filename}
-                </button>
+                </a>
                 <button
                   type="button"
                   onClick={() => openPdfInNewTab(pdf)}

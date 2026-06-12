@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { renderSheets, type FaceImages } from "@/lib/flexagon/render";
+import { STRIP, triangleVertices } from "@/lib/flexagon/geometry";
 
 interface FlexagonPreviewProps {
   faces: FaceImages;
@@ -39,6 +40,7 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
   }, [faces.face1, faces.face2, faces.face3]);
 
   const src = side === "front" ? frontUrl : backUrl;
+  const triangles = previewTriangles(side);
 
   return (
     <div className="sheet flex flex-col gap-5 p-8">
@@ -63,7 +65,24 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
 
       <div className="relative aspect-[11/8.5] w-full overflow-hidden bg-[var(--color-paper-deep)]">
         {src ? (
-          <img src={src} alt={`${side} of strip`} className="h-full w-full object-contain" />
+          <>
+            <img src={src} alt={`${side} of strip`} className="flexagon-breathe h-full w-full object-contain" />
+            <svg
+              viewBox={`0 0 ${PAGE_W} ${PAGE_H}`}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              preserveAspectRatio="xMidYMid meet"
+            >
+              {triangles.map((points, index) => (
+                <polygon
+                  key={`${side}-${index}`}
+                  points={points}
+                  className="flexagon-triangle-wake"
+                  style={{ animationDelay: `${index * 0.45}s` }}
+                />
+              ))}
+            </svg>
+          </>
         ) : (
           <div className="grid h-full w-full place-items-center font-display text-sm italic text-[var(--color-ink-soft)]">
             composing…
@@ -82,5 +101,23 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
         scattered wedges meet up to recompose each hexagonal face.
       </p>
     </div>
+  );
+}
+
+const PAGE_W = 3300;
+const PAGE_H = 2550;
+const DPI = 300;
+
+function previewTriangles(side: Side) {
+  const s = 1.7 * DPI;
+  const stripW = 5.5 * s;
+  const stripH = (s * Math.sqrt(3)) / 2;
+  const ox = (PAGE_W - stripW) / 2;
+  const oy = (PAGE_H - stripH) / 2;
+
+  return STRIP.map((triangle) =>
+    triangleVertices(triangle.index, s, ox, oy, side === "back")
+      .map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+      .join(" "),
   );
 }

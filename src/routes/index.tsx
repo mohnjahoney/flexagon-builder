@@ -297,7 +297,7 @@ function Header() {
         </Link>
         <nav className="flex items-center gap-6 text-sm text-[var(--color-ink-soft)]">
           <Link to="/about" className="hover:text-[var(--color-ink)]">About</Link>
-          <Link to="/how-to-fold" className="hover:text-[var(--color-ink)]">How to fold</Link>
+          <a href="/how-to-fold" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--color-ink)]">How to fold ↗</a>
         </nav>
       </div>
     </header>

@@ -202,4 +202,43 @@
     font-variant-numeric: lining-nums;
     color: var(--color-oxblood);
   }
+
+  .flexagon-breathe {
+    animation: flexagon-breathe 10s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  .flexagon-triangle-wake {
+    animation: triangle-wake 10s ease-in-out infinite;
+    fill: oklch(0.98 0.01 85 / 0);
+    stroke: oklch(0.46 0.14 25 / 0);
+    stroke-width: 12;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flexagon-breathe,
+    .flexagon-triangle-wake {
+      animation: none;
+    }
+  }
+}
+
+@keyframes triangle-wake {
+  0%, 8% {
+    fill: oklch(0.98 0.01 85 / 0);
+    stroke: oklch(0.46 0.14 25 / 0);
+  }
+  14%, 64% {
+    fill: oklch(0.98 0.01 85 / 0.22);
+    stroke: oklch(0.46 0.14 25 / 0.72);
+  }
+  82%, 100% {
+    fill: oklch(0.98 0.01 85 / 0);
+    stroke: oklch(0.46 0.14 25 / 0);
+  }
+}
+
+@keyframes flexagon-breathe {
+  0%, 100% { transform: scale(1); filter: contrast(1); }
+  50% { transform: scale(1.012); filter: contrast(1.035); }
 }

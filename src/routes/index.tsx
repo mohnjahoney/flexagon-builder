@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Download, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Download, FileCheck2, Loader2, Printer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacePicker } from "@/components/flexagon/FacePicker";
 import { FlexagonPreview } from "@/components/flexagon/FlexagonPreview";
-import { buildFlexagonPdf, type BuiltPdf } from "@/lib/flexagon/pdf";
+import { buildFlexagonPdf, type BuiltPdf, type PdfBuildStage } from "@/lib/flexagon/pdf";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -25,30 +25,39 @@ function Index() {
   const [face3, setFace3] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<BuiltPdf | null>(null);
+  const [stage, setStage] = useState<PdfBuildStage | "ready" | null>(null);
+  const buildButtonRef = useRef<HTMLButtonElement | null>(null);
+  const busyRef = useRef(false);
 
   const hasAny = !!(face1 || face2 || face3);
   const hasAll = !!(face1 && face2 && face3);
 
-  // Revoke the previous object URL whenever we build a new one or unmount.
   useEffect(() => {
-    return () => {
-      if (pdf) URL.revokeObjectURL(pdf.url);
+    const button = buildButtonRef.current;
+    if (!button) return;
+    const handleClick = () => {
+      if (!busyRef.current) void build();
     };
-  }, [pdf]);
+    button.addEventListener("click", handleClick);
+    return () => button.removeEventListener("click", handleClick);
+  }, [face1, face2, face3]);
 
   async function build() {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
+    setStage("rendering-strip");
     try {
-      const built = await buildFlexagonPdf({ face1, face2, face3 }, "hexaflexagon.pdf");
-      setPdf((prev) => {
-        if (prev) URL.revokeObjectURL(prev.url);
-        return built;
-      });
+      const built = await buildFlexagonPdf({ face1, face2, face3 }, "hexaflexagon.pdf", setStage);
+      setPdf(built);
+      setStage("ready");
       toast.success(`PDF ready — ${(built.sizeBytes / 1024).toFixed(0)} KB`);
     } catch (err) {
       console.error("[flexagon] PDF generation failed:", err);
+      setStage(null);
       toast.error("Sorry — the PDF could not be generated. Check the console for details.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -93,6 +102,7 @@ function Index() {
           </div>
 
           <Button
+            ref={buildButtonRef}
             onClick={build}
             disabled={busy}
             className="mt-2 h-12 w-full rounded-sm bg-[var(--color-oxblood)] text-[var(--color-paper)] hover:bg-[var(--color-oxblood)]/90"
@@ -109,6 +119,8 @@ function Index() {
                     : "Build — blank template"}
           </Button>
 
+          {stage && <BuildStages stage={stage} />}
+
           <Link to="/how-to-fold" className="text-center text-xs text-[var(--color-ink-soft)] underline-offset-4 hover:underline">
             Read the folding instructions
           </Link>
@@ -124,35 +136,17 @@ function Index() {
                 <h3 className="mt-1 font-display text-2xl">Inspect &amp; save</h3>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <a
-                  href={pdf.url}
-                  download={pdf.filename}
-                  className="inline-flex h-10 items-center gap-2 rounded-sm bg-[var(--color-ink)] px-4 text-sm text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
-                >
-                  <Download className="h-4 w-4" />
-                  Download {pdf.filename}
-                </a>
-                <a
-                  href={pdf.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-10 items-center gap-2 rounded-sm border border-[var(--color-hairline)] px-4 text-sm text-[var(--color-ink)] hover:bg-[var(--color-paper-deep)]"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Open in new tab
-                </a>
+                <PdfPostForm pdf={pdf} mode="attachment" />
+                <PdfPostForm pdf={pdf} mode="inline" />
               </div>
             </div>
             <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
-              If the download button doesn't trigger (some sandboxed previews block it), the "Open in new tab" link
-              always works — your browser's PDF viewer has its own save button.
+              The empty PDF iframe is gone: these proof images are the exact rendered pages that are encoded into the PDF.
+              Saving uses a top-level file response instead of a blocked blob URL or popup.
             </p>
-            <div className="h-[80vh] w-full overflow-hidden rounded-sm border border-[var(--color-hairline)] bg-[var(--color-paper-deep)]">
-              <iframe
-                title="Flexagon PDF preview"
-                src={pdf.url}
-                className="h-full w-full"
-              />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ProofPage label="Page 1 · front" src={pdf.previews.front} />
+              <ProofPage label="Page 2 · back" src={pdf.previews.back} />
             </div>
           </div>
         </section>
@@ -171,6 +165,70 @@ function Row({ label, present }: { label: string; present: boolean }) {
         {present ? "ready" : "not yet chosen"}
       </span>
     </div>
+  );
+}
+
+function BuildStages({ stage }: { stage: PdfBuildStage | "ready" }) {
+  const stages: Array<{ id: PdfBuildStage | "ready"; label: string }> = [
+    { id: "rendering-strip", label: "Render strip" },
+    { id: "assembling-pages", label: "Assemble pages" },
+    { id: "encoding-file", label: "Encode file" },
+    { id: "ready", label: "Ready" },
+  ];
+  const activeIndex = stages.findIndex((item) => item.id === stage);
+
+  return (
+    <div className="grid grid-cols-2 gap-2 border-t border-[var(--color-hairline)] pt-4 text-xs md:grid-cols-4">
+      {stages.map((item, index) => (
+        <div key={item.id} className="flex items-center gap-2 text-[var(--color-ink-soft)]">
+          <span
+            className={`grid h-5 w-5 place-items-center rounded-full border text-[10px] ${
+              index <= activeIndex
+                ? "border-[var(--color-oxblood)] bg-[var(--color-oxblood)] text-[var(--color-paper)]"
+                : "border-[var(--color-hairline)]"
+            }`}
+          >
+            {index < activeIndex || stage === "ready" ? "✓" : index + 1}
+          </span>
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PdfPostForm({ pdf, mode }: { pdf: BuiltPdf; mode: "attachment" | "inline" }) {
+  const isDownload = mode === "attachment";
+
+  return (
+    <form action="/api/download-pdf" method="post" target={isDownload ? undefined : "_blank"}>
+      <input type="hidden" name="filename" value={pdf.filename} />
+      <input type="hidden" name="mode" value={mode} />
+      <input type="hidden" name="base64" value={pdf.base64} />
+      <button
+        type="submit"
+        className={`inline-flex h-10 items-center gap-2 rounded-sm px-4 text-sm ${
+          isDownload
+            ? "bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink)]/90"
+            : "border border-[var(--color-hairline)] text-[var(--color-ink)] hover:bg-[var(--color-paper-deep)]"
+        }`}
+      >
+        {isDownload ? <Download className="h-4 w-4" /> : <Printer className="h-4 w-4" />}
+        {isDownload ? `Download ${pdf.filename}` : "Open printable PDF"}
+      </button>
+    </form>
+  );
+}
+
+function ProofPage({ label, src }: { label: string; src: string }) {
+  return (
+    <figure className="border border-[var(--color-hairline)] bg-[var(--color-paper-deep)] p-3">
+      <div className="mb-2 flex items-center gap-2 text-xs text-[var(--color-ink-soft)]">
+        <FileCheck2 className="h-4 w-4 text-[var(--color-oxblood)]" />
+        <figcaption>{label}</figcaption>
+      </div>
+      <img src={src} alt={`${label} proof`} className="w-full bg-[var(--color-paper)]" />
+    </figure>
   );
 }
 

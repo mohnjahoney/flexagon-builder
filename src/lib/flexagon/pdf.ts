@@ -1,11 +1,17 @@
 import { jsPDF } from "jspdf";
 import { renderSheets, type FaceImages } from "./render";
 
+export type PdfBuildStage = "rendering-strip" | "assembling-pages" | "encoding-file";
+
 export interface BuiltPdf {
   blob: Blob;
-  url: string;
+  base64: string;
   filename: string;
   sizeBytes: number;
+  previews: {
+    front: string;
+    back: string;
+  };
 }
 
 /**
@@ -21,8 +27,12 @@ export interface BuiltPdf {
 export async function buildFlexagonPdf(
   faces: FaceImages,
   filename = "hexaflexagon.pdf",
+  onStage?: (stage: PdfBuildStage) => void,
 ): Promise<BuiltPdf> {
+  onStage?.("rendering-strip");
   const { front, back } = await renderSheets(faces);
+
+  onStage?.("assembling-pages");
   const pdf = new jsPDF({ orientation: "landscape", unit: "in", format: "letter" });
   const W = 11, H = 8.5;
 
@@ -33,9 +43,30 @@ export async function buildFlexagonPdf(
   pdf.addPage("letter", "portrait");
   drawInstructions(pdf);
 
+  onStage?.("encoding-file");
   const blob = pdf.output("blob");
-  const url = URL.createObjectURL(blob);
-  return { blob, url, filename, sizeBytes: blob.size };
+  const base64 = await blobToBase64(blob);
+  return {
+    blob,
+    base64,
+    filename,
+    sizeBytes: blob.size,
+    previews: {
+      front: front.toDataURL("image/jpeg", 0.82),
+      back: back.toDataURL("image/jpeg", 0.82),
+    },
+  };
+}
+
+async function blobToBase64(blob: Blob) {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
 }
 
 function drawInstructions(pdf: jsPDF) {

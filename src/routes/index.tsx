@@ -119,6 +119,19 @@ function Index() {
 
           <LayoutToggle value={layout} onChange={setLayout} />
 
+          <label className="flex items-start gap-3 border-t border-[var(--color-hairline)] pt-5 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeInstructions}
+              onChange={(e) => setIncludeInstructions(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[var(--color-oxblood)]"
+            />
+            <span>
+              <span className="font-display">Include folding instructions</span>
+              <span className="ml-2 text-[var(--color-ink-soft)]">adds one portrait page at the end</span>
+            </span>
+          </label>
+
           <Button
             onClick={build}
             disabled={busy}
@@ -137,10 +150,6 @@ function Index() {
           </Button>
 
           {stage && <BuildStages stage={stage} />}
-
-          <Link to="/how-to-fold" className="text-center text-xs text-[var(--color-ink-soft)] underline-offset-4 hover:underline">
-            Read the folding instructions
-          </Link>
         </div>
       </section>
 

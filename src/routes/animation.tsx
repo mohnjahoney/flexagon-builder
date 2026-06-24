@@ -1,9 +1,12 @@
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import volleyballBall from "@/assets/volleyball-ball.png";
-import volleyballBump from "@/assets/volleyball-bump.png";
-import volleyballSpike from "@/assets/volleyball-spike.png";
+// import volleyballBall from "@/assets/volleyball-ball.png";
+// import volleyballBump from "@/assets/volleyball-bump.png";
+// import volleyballSpike from "@/assets/volleyball-spike.png";
+import sunflower_5 from "@/assets/sunflower_5.png";
+import sunflower_7 from "@/assets/sunflower_7.png";
+import sunflower_8 from "@/assets/sunflower_8.png";
 import type { FaceImages } from "@/lib/flexagon/render";
 import {
   createInitialFoldingState,
@@ -24,9 +27,9 @@ import { HashLink } from "@/components/HashLink";
 
 function storedFaces(): FaceImages {
   const fallback = {
-    face1: volleyballBall,
-    face2: volleyballBump,
-    face3: volleyballSpike,
+    face1: sunflower_5,
+    face2: sunflower_7,
+    face3: sunflower_8,
   };
   if (typeof window === "undefined") return fallback;
   try {

@@ -171,7 +171,7 @@ function drawBlankSlot(
   ctx.translate(cx, cy);
   if (!apexUp) ctx.rotate(Math.PI);
   ctx.fillStyle = "#7a3b2c";
-  ctx.font = `500 ${0.1 * dpi}px "Inter Tight", system-ui, sans-serif`;
+  ctx.font = `500 ${0.15 * dpi}px "Inter Tight", system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(slot.text, 0, 0, 0.7 * dpi);
@@ -409,9 +409,10 @@ async function drawSupportCard(
   ctx.textBaseline = "middle";
   ctx.font = `600 ${Math.min(0.24 * dpi, cardH * 0.24)}px "Fraunces", Georgia, serif`;
   ctx.fillText("Studio Pique", textX, y + cardH * 0.42, textW);
-  ctx.font = `400 ${Math.min(0.115 * dpi, cardH * 0.13)}px "Inter Tight", system-ui, sans-serif`;
+  // ctx.font = `500 ${Math.min(0.115 * dpi, cardH * 0.13)}px "Inter Tight", system-ui, sans-serif`;
+  ctx.font = `500 ${Math.min(0.15 * dpi, cardH * 0.15)}px "Inter Tight", system-ui, sans-serif`;
   ctx.fillStyle = "rgba(16,34,61,0.78)";
-  ctx.fillText("scan to tip / support the maker", textX, y + cardH * 0.64, textW);
+  ctx.fillText("Support the studio - hope you have fun!", textX, y + cardH * 0.64, textW);
   ctx.restore();
 }
 

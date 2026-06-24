@@ -7,17 +7,20 @@ import { TriangleArrayPanel } from "@/components/flexagon/TriangleArrayPanel";
 import { buildFlexagonPdf } from "@/lib/flexagon/pdf";
 import type { PrintLayout } from "@/lib/flexagon/render";
 import { toast } from "sonner";
-import volleyballBall from "@/assets/volleyball-ball.png";
-import volleyballBump from "@/assets/volleyball-bump.png";
-import volleyballSpike from "@/assets/volleyball-spike.png";
+// import volleyballBall from "@/assets/volleyball-ball.png";
+// import volleyballBump from "@/assets/volleyball-bump.png";
+// import volleyballSpike from "@/assets/volleyball-spike.png";
+import sunflower_5 from "@/assets/sunflower_5.png";
+import sunflower_7 from "@/assets/sunflower_7.png";
+import sunflower_8 from "@/assets/sunflower_8.png";
 import { TRIANGLE_DEBUG } from "@/lib/flexagon/debug";
 import { PRINTED_FOLDING_INSTRUCTIONS_ENABLED } from "@/lib/flexagon/features";
 import { HashLink } from "@/components/HashLink";
 
 export function Home() {
-  const [face1, setFace1] = useState<string | null>(volleyballBall);
-  const [face2, setFace2] = useState<string | null>(volleyballBump);
-  const [face3, setFace3] = useState<string | null>(volleyballSpike);
+  const [face1, setFace1] = useState<string | null>(sunflower_5);
+  const [face2, setFace2] = useState<string | null>(sunflower_7);
+  const [face3, setFace3] = useState<string | null>(sunflower_8);
   const [layout, setLayout] = useState<PrintLayout>("single-sided");
   // const [layout, setLayout] = useState<PrintLayout>("double-sided");
   const [includeInstructions, setIncludeInstructions] = useState(

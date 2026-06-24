@@ -14,6 +14,7 @@ const OUT_SIZE = 1024;
 export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [scale, setScale] = useState(1);
+  const [minimumScale, setMinimumScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
   const dragging = useRef<{ x: number; y: number } | null>(null);
@@ -25,11 +26,13 @@ export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) 
     i.crossOrigin = "anonymous";
     i.onload = () => {
       setImg(i);
-      // initial scale: cover the hex
+      // Start at the smallest uniform scale that covers the full hexagon.
       const stage = stageRef.current;
       if (stage) {
-        const w = stage.clientWidth, h = stage.clientHeight;
-        const s = Math.max(w / i.width, h / i.height) * 1.05;
+        const w = stage.clientWidth;
+        const h = stage.clientHeight;
+        const s = Math.max(w / i.width, h / i.height);
+        setMinimumScale(s);
         setScale(s);
         setTx(0);
         setTy(0);
@@ -54,7 +57,8 @@ export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) 
   function handleConfirm() {
     if (!img || !stageRef.current) return;
     const stage = stageRef.current;
-    const sw = stage.clientWidth, sh = stage.clientHeight;
+    const sw = stage.clientWidth,
+      sh = stage.clientHeight;
     // Render at OUT_SIZE square
     const canvas = document.createElement("canvas");
     canvas.width = OUT_SIZE;
@@ -65,7 +69,8 @@ export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) 
     ctx.fillRect(0, 0, OUT_SIZE, OUT_SIZE);
 
     // hex clip (flat-top hex inscribed in square)
-    const cx = OUT_SIZE / 2, cy = OUT_SIZE / 2;
+    const cx = OUT_SIZE / 2,
+      cy = OUT_SIZE / 2;
     const r = OUT_SIZE / 2;
     ctx.save();
     ctx.beginPath();
@@ -73,13 +78,15 @@ export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) 
       const a = -Math.PI / 2 + (k * Math.PI) / 3;
       const x = cx + r * Math.cos(a);
       const y = cy + r * Math.sin(a);
-      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if (k === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     }
     ctx.closePath();
     ctx.clip();
 
     // Map stage coords to canvas coords.
-    const k = OUT_SIZE / Math.min(sw, sh);
+    const outputHexWidth = (OUT_SIZE * Math.sqrt(3)) / 2;
+    const k = Math.min(outputHexWidth / sw, OUT_SIZE / sh);
     const drawW = img.width * scale * k;
     const drawH = img.height * scale * k;
     const dx = (OUT_SIZE - drawW) / 2 + tx * k;
@@ -91,7 +98,12 @@ export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onCancel();
+      }}
+    >
       <DialogContent className="max-w-xl bg-card">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Crop within the hexagon</DialogTitle>
@@ -125,6 +137,8 @@ export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) 
                 top: "50%",
                 width: img.width * scale,
                 height: img.height * scale,
+                maxWidth: "none",
+                maxHeight: "none",
                 transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`,
                 pointerEvents: "none",
               }}
@@ -135,17 +149,23 @@ export function HexCropper({ open, src, onCancel, onConfirm }: HexCropperProps) 
           <span className="label-eyebrow">Zoom</span>
           <input
             type="range"
-            min={0.2}
-            max={4}
-            step={0.01}
+            min={minimumScale}
+            max={minimumScale * 4}
+            step={Math.max(minimumScale / 100, 0.001)}
             value={scale}
             onChange={(e) => setScale(parseFloat(e.target.value))}
+            aria-label="Zoom"
             className="flex-1 accent-[var(--color-oxblood)]"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button onClick={handleConfirm} className="bg-[var(--color-oxblood)] text-[var(--color-paper)] hover:bg-[var(--color-oxblood)]/90">
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            className="bg-[var(--color-oxblood)] text-[var(--color-paper)] hover:bg-[var(--color-oxblood)]/90"
+          >
             Use this crop
           </Button>
         </div>

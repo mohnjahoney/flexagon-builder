@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { renderSheets, type FaceImages } from "@/lib/flexagon/render";
+import { PRINTED_FOLDING_INSTRUCTIONS_ENABLED } from "@/lib/flexagon/features";
 
 interface FlexagonPreviewProps {
   faces: FaceImages;
@@ -62,7 +63,11 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
 
       <div className="relative aspect-[11/8.5] w-full overflow-hidden bg-[var(--color-paper-deep)]">
         {src ? (
-          <img src={src} alt={`strip ${side === 0 ? "A" : "B"} layout`} className="flexagon-breathe h-full w-full object-contain" />
+          <img
+            src={src}
+            alt={`strip ${side === 0 ? "A" : "B"} layout`}
+            className="flexagon-breathe h-full w-full object-contain"
+          />
         ) : (
           <div className="grid h-full w-full place-items-center font-display text-sm italic text-[var(--color-ink-soft)]">
             composing…
@@ -76,11 +81,21 @@ export function FlexagonPreview({ faces }: FlexagonPreviewProps) {
       </div>
 
       <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
-        Each face is sliced into six 60° wedges and scattered across the strip. When folded into thirds, the wedges
-        recompose each hexagonal face.{" "}
-        <a href="/how-to-fold" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[var(--color-ink)]">
-          Read the folding instructions ↗
-        </a>
+        Each face is sliced into six 60° wedges and scattered across the strip. When folded into
+        thirds, the wedges recompose each hexagonal face.
+        {PRINTED_FOLDING_INSTRUCTIONS_ENABLED && (
+          <>
+            {" "}
+            <a
+              href="/how-to-fold"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-[var(--color-ink)]"
+            >
+              Read the folding instructions ↗
+            </a>
+          </>
+        )}
       </p>
     </div>
   );

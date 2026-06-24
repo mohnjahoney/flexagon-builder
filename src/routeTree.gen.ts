@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as HowToFoldRouteImport } from './routes/how-to-fold'
+import { Route as AnimationRouteImport } from './routes/animation'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
 const HowToFoldRoute = HowToFoldRouteImport.update({
   id: '/how-to-fold',
   path: '/how-to-fold',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnimationRoute = AnimationRouteImport.update({
+  id: '/animation',
+  path: '/animation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -32,30 +38,34 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/animation': typeof AnimationRoute
   '/how-to-fold': typeof HowToFoldRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/animation': typeof AnimationRoute
   '/how-to-fold': typeof HowToFoldRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/animation': typeof AnimationRoute
   '/how-to-fold': typeof HowToFoldRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/how-to-fold'
+  fullPaths: '/' | '/about' | '/animation' | '/how-to-fold'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/how-to-fold'
-  id: '__root__' | '/' | '/about' | '/how-to-fold'
+  to: '/' | '/about' | '/animation' | '/how-to-fold'
+  id: '__root__' | '/' | '/about' | '/animation' | '/how-to-fold'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AnimationRoute: typeof AnimationRoute
   HowToFoldRoute: typeof HowToFoldRoute
 }
 
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/how-to-fold'
       fullPath: '/how-to-fold'
       preLoaderRoute: typeof HowToFoldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/animation': {
+      id: '/animation'
+      path: '/animation'
+      fullPath: '/animation'
+      preLoaderRoute: typeof AnimationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -88,8 +105,19 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AnimationRoute: AnimationRoute,
   HowToFoldRoute: HowToFoldRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

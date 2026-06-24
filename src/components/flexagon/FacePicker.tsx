@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { HexCropper } from "./HexCropper";
 import { CameraCapture } from "./CameraCapture";
 import { toast } from "sonner";
+import { TRIANGLE_DEBUG } from "@/lib/flexagon/debug";
 
 interface FacePickerProps {
   numeral: "I" | "II" | "III";
@@ -55,8 +56,8 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
   }
 
   return (
-    <div className="sheet relative flex flex-col gap-3 p-5 pt-4">
-      <span className="roman-numeral absolute left-4 top-3 text-2xl leading-none text-[var(--color-ink-soft)]">
+    <div className="sheet flex flex-col gap-3 p-5 pt-4">
+      <span className="roman-numeral self-start text-2xl leading-none text-[var(--color-ink-soft)]">
         {numeral}
       </span>
 
@@ -72,12 +73,15 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
           }}
         />
         {value ? (
-          <img
-            src={value}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{ clipPath: "polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)" }}
-          />
+          <>
+            <img
+              src={value}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ clipPath: "polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)" }}
+            />
+            {TRIANGLE_DEBUG.faceOverlay && <FaceTriangleOverlay />}
+          </>
         ) : (
           <div
             className="absolute inset-0 grid place-items-center text-[var(--color-ink-soft)]"
@@ -113,5 +117,50 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
         onCapture={(d) => { setCamOpen(false); openCrop(d); }}
       />
     </div>
+  );
+}
+
+function FaceTriangleOverlay() {
+  const width = 50 * Math.sqrt(3);
+  const centerX = width / 2;
+  const vertices = [
+    [centerX, 0],
+    [width, 25],
+    [width, 75],
+    [centerX, 100],
+    [0, 75],
+    [0, 25],
+  ];
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} 100`}
+      aria-label="Six numbered image triangles"
+      className="pointer-events-none absolute inset-0 h-full w-full"
+    >
+      {vertices.map(([x, y], index) => (
+        <line key={index} x1={centerX} y1="50" x2={x} y2={y} stroke="#faf7ef" strokeWidth="0.8" />
+      ))}
+      {Array.from({ length: 6 }, (_, index) => {
+        const angle = (-60 + index * 60) * (Math.PI / 180);
+        const x = centerX + Math.cos(angle) * 11;
+        const y = 50 + Math.sin(angle) * 11;
+        return (
+          <g key={index}>
+            <circle cx={x} cy={y} r="4.8" fill="rgba(42,33,23,0.82)" />
+            <text
+              x={x}
+              y={y + 0.4}
+              fill="#faf7ef"
+              fontSize="6"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {index + 1}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }

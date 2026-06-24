@@ -1,5 +1,7 @@
 import { jsPDF } from "jspdf";
 import { renderSheets, type FaceImages, type PrintLayout } from "./render";
+import { renderCustomFoldingInstructions } from "./custom-folding-instructions/render";
+import { PRINTED_FOLDING_INSTRUCTIONS_ENABLED } from "./features";
 
 export type PdfBuildStage = "rendering-strip" | "assembling-pages" | "encoding-file";
 
@@ -18,6 +20,7 @@ export interface BuildOptions {
   dpi?: number;
   filename?: string;
   includeInstructions?: boolean;
+  instructionStyle?: "custom" | "classic";
 }
 
 /**
@@ -34,9 +37,12 @@ export async function buildFlexagonPdf(
   opts: BuildOptions = {},
   onStage?: (stage: PdfBuildStage) => void,
 ): Promise<BuiltPdf> {
-  const layout: PrintLayout = opts.layout ?? "double-sided";
+  const layout: PrintLayout = opts.layout ?? "single-sided";
+  // const layout: PrintLayout = opts.layout ?? "double-sided";
   const dpi = opts.dpi ?? 600;
-  const includeInstructions = opts.includeInstructions ?? true;
+  const includeInstructions =
+    PRINTED_FOLDING_INSTRUCTIONS_ENABLED && (opts.includeInstructions ?? true);
+  const instructionStyle = opts.instructionStyle ?? "custom";
   const filename = opts.filename ?? `hexaflexagon-${layout}.pdf`;
 
   onStage?.("rendering-strip");
@@ -44,7 +50,8 @@ export async function buildFlexagonPdf(
 
   onStage?.("assembling-pages");
   const pdf = new jsPDF({ orientation: "landscape", unit: "in", format: "letter" });
-  const W = 11, H = 8.5;
+  const W = 11,
+    H = 8.5;
 
   pages.forEach((canvas, i) => {
     if (i > 0) pdf.addPage("letter", "landscape");
@@ -52,7 +59,13 @@ export async function buildFlexagonPdf(
     pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, W, H, undefined, "FAST");
   });
 
-  if (includeInstructions) {
+  if (includeInstructions && instructionStyle === "custom") {
+    const instructionPages = await renderCustomFoldingInstructions(faces, layout);
+    instructionPages.forEach((canvas) => {
+      pdf.addPage("letter", "portrait");
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, 8.5, 11, undefined, "FAST");
+    });
+  } else if (includeInstructions) {
     pdf.addPage("letter", "portrait");
     drawInstructions(pdf, layout);
   }
@@ -97,17 +110,18 @@ function drawInstructions(pdf: jsPDF, layout: PrintLayout) {
     "II. Cut around the outline of the strip; discard the surrounding paper.",
     "III. Score and crease every dashed fold line firmly in both directions.",
   ];
-  const layoutSteps = layout === "single-sided"
-    ? [
-        "IV. Fold the sheet along the centre seam so the long edges meet — you now have a two-sided strip.",
-        "V.  Optional: glue the two halves together for sturdiness, then fold the strip into thirds until a hexagon appears.",
-        "VI. Apply glue to the half-triangle tab and press it onto the matching triangle at the other end.",
-      ]
-    : [
-        "IV. Two pages: print double-sided (long-edge binding) so the back lines up with the front.",
-        "V.  Fold the strip into thirds until you are left with a hexagon showing Face I.",
-        "VI. Apply glue to the half-triangle tab on the back and press it onto the matching triangle.",
-      ];
+  const layoutSteps =
+    layout === "single-sided"
+      ? [
+          "IV. Fold the sheet along the centre seam so the long edges meet — you now have a two-sided strip.",
+          "V.  Optional: glue the two halves together for sturdiness, then fold the strip into thirds until a hexagon appears.",
+          "VI. Apply glue to the half-triangle tab and press it onto the matching triangle at the other end.",
+        ]
+      : [
+          "IV. Two pages: print double-sided (long-edge binding) so the back lines up with the front.",
+          "V.  Fold the strip into thirds until you are left with a hexagon showing Face I.",
+          "VI. Apply glue to the half-triangle tab on the back and press it onto the matching triangle.",
+        ];
   const tail = [
     "VII. To flex: pinch two adjacent triangles upward into a peak, then push the opposite side down and open the hexagon from the centre. A new face appears.",
   ];

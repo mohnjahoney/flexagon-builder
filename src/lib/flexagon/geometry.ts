@@ -1,7 +1,7 @@
 // Trihexaflexagon strip geometry.
 //
-// A trihexaflexagon is folded from a strip of 10 equilateral triangles
-// (plus a glue tab). Triangles alternate apex-up / apex-down across the row.
+// A trihexaflexagon is folded from a strip of 10 equilateral triangles.
+// Triangles alternate flat-edge-on-top / flat-edge-on-bottom across the row.
 // When folded, the strip forms a hexagon with three discoverable faces.
 //
 // Canonical labeling (Martin Gardner):
@@ -9,8 +9,9 @@
 //   back:  [3, 3, 1, 1, 2, 2, 3, 3, 1, 1]
 // Glue the 10th triangle's back onto the 1st triangle's back.
 //
-// For image reassembly we treat each face's hexagonal crop as six wedges
-// (60° sectors numbered 0..5 starting at the rightmost edge, going CCW).
+// For image reassembly we treat each face's hexagonal crop as six wedges.
+// Index 0 runs from the top vertex to the upper-right vertex; indexes then
+// continue clockwise. The UI displays these indexes as labels 1 through 6.
 // Each strip triangle is assigned a wedge index for the face it carries,
 // in the order those triangles appear on that face when folded.
 
@@ -64,7 +65,8 @@ export const STRIP: StripTriangle[] = (() => {
 /**
  * Compute the 3 vertex coordinates of triangle `i` in the strip,
  * given an edge length `s` and a top-left origin.
- * Front layout: triangles arranged left-to-right, sharing edges.
+ * Front layout: triangles arranged left-to-right, sharing edges. Even indexes
+ * have their flat edge on top (U); odd indexes have their flat edge below (D).
  */
 export function triangleVertices(
   i: number,
@@ -75,22 +77,21 @@ export function triangleVertices(
 ): [Point, Point, Point] {
   const h = (s * SQRT3) / 2;
   const xLeft = originX + (i * s) / 2;
-  const apexUp = i % 2 === 0;
-  const verts: [Point, Point, Point] = apexUp
+  const flatEdgeOnTop = i % 2 === 0;
+  const verts: [Point, Point, Point] = flatEdgeOnTop
     ? [
-        { x: xLeft, y: originY + h },
-        { x: xLeft + s, y: originY + h },
-        { x: xLeft + s / 2, y: originY },
-      ]
-    : [
         { x: xLeft, y: originY },
         { x: xLeft + s, y: originY },
         { x: xLeft + s / 2, y: originY + h },
+      ]
+    : [
+        { x: xLeft, y: originY + h },
+        { x: xLeft + s, y: originY + h },
+        { x: xLeft + s / 2, y: originY },
       ];
   if (!mirror) return verts;
-  // Reflect horizontally about the centre of the strip outline (width = 6s,
-  // including the half-triangle glue tab). Reflected x = 2*(originX + 3s) - x.
-  const axis = originX + 3 * s;
+  // Reflect horizontally about the centre of the 10-triangle strip.
+  const axis = originX + 2.75 * s;
   return verts.map((p) => ({ x: 2 * axis - p.x, y: p.y })) as [Point, Point, Point];
 }
 

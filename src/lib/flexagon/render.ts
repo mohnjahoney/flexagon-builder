@@ -19,7 +19,7 @@ import {
   type TenStripSlots,
 } from "./strip-config";
 import { drawTriangleImage, extractTriangleImages, type TriangleImages } from "./triangles";
-import { drawQR, STUDIO_PIQUE_QR_COLORS } from "@studiopique/brand";
+import { drawQR, STUDIO_PIQUE_QR_COLORS } from "../qr";
 
 export interface FaceImages {
   face1: string | null;

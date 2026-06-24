@@ -37,7 +37,9 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
     if (catBusy) return;
     setCatBusy(true);
     try {
-      const res = await fetch(`https://cataas.com/cat?width=900&height=900&t=${Date.now()}-${Math.random()}`);
+      const res = await fetch(
+        `https://cataas.com/cat?width=900&height=900&t=${Date.now()}-${Math.random()}`,
+      );
       if (!res.ok) throw new Error(`cataas ${res.status}`);
       const blob = await res.blob();
       const dataUrl: string = await new Promise((resolve, reject) => {
@@ -100,7 +102,13 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
         <Button variant="outline" size="sm" onClick={() => setCamOpen(true)}>
           <Camera /> Camera
         </Button>
-        <Button variant="outline" size="sm" onClick={fetchCat} disabled={catBusy} title="Fetch a random cat from cataas.com">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchCat}
+          disabled={catBusy}
+          title="Fetch a random cat from cataas.com"
+        >
           {catBusy ? <Loader2 className="animate-spin" /> : <Cat />} Cats
         </Button>
       </div>
@@ -109,12 +117,18 @@ export function FacePicker({ numeral, value, onChange }: FacePickerProps) {
         open={cropOpen}
         src={rawSrc}
         onCancel={() => setCropOpen(false)}
-        onConfirm={(d) => { onChange(d); setCropOpen(false); }}
+        onConfirm={(d) => {
+          onChange(d);
+          setCropOpen(false);
+        }}
       />
       <CameraCapture
         open={camOpen}
         onCancel={() => setCamOpen(false)}
-        onCapture={(d) => { setCamOpen(false); openCrop(d); }}
+        onCapture={(d) => {
+          setCamOpen(false);
+          openCrop(d);
+        }}
       />
     </div>
   );

@@ -1,24 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { PRINTED_FOLDING_INSTRUCTIONS_ENABLED } from "@/lib/flexagon/features";
-
-export const Route = createFileRoute("/how-to-fold")({
-  head: () => ({
-    meta: [
-      { title: "How to fold — Hexaflexagon Atelier" },
-      {
-        name: "description",
-        content:
-          "Step-by-step instructions for folding the trihexaflexagon template into a working paper toy.",
-      },
-      { property: "og:title", content: "Folding instructions" },
-      {
-        property: "og:description",
-        content: "Cut, crease, fold, glue. Six steps to a working trihexaflexagon.",
-      },
-    ],
-  }),
-  component: HowToFold,
-});
+import { HashLink } from "@/components/HashLink";
 
 const STEPS = [
   {
@@ -53,12 +34,12 @@ const STEPS = [
   },
 ];
 
-function HowToFold() {
+export function HowToFold() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
-      <Link to="/" className="label-eyebrow hover:text-[var(--color-ink)]">
+      <HashLink to="/" className="label-eyebrow hover:text-[var(--color-ink)]">
         ← back to the bench
-      </Link>
+      </HashLink>
       <h1 className="mt-6 font-display text-5xl">How to fold.</h1>
       <p className="mt-4 text-[var(--color-ink-soft)]">
         Six unhurried steps.

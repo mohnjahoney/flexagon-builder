@@ -1,4 +1,3 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,16 +20,7 @@ import {
 } from "@/lib/flexagon/custom-folding-instructions/folding-engine";
 import { renderStripAssets } from "@/lib/flexagon/custom-folding-instructions/render";
 import { createFoldingAnimationRenderer } from "@/lib/flexagon/custom-folding-instructions/three-renderer";
-
-export const Route = createFileRoute("/animation")({
-  head: () => ({
-    meta: [
-      { title: "Strip fold animation — Hexaflexagon Atelier" },
-      { name: "description", content: "A Three.js test of the first flexagon strip fold." },
-    ],
-  }),
-  component: AnimationTest,
-});
+import { HashLink } from "@/components/HashLink";
 
 function storedFaces(): FaceImages {
   const fallback = {
@@ -147,7 +137,7 @@ function buildThicknessAwareSequence(paperThickness: number) {
   };
 }
 
-function AnimationTest() {
+export function Animation() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const restartRef = useRef(0);
   const seekRef = useRef<number | null>(null);
@@ -446,12 +436,12 @@ function AnimationTest() {
             <p className="label-eyebrow">3-D folding test · compound hinges</p>
             <h1 className="mt-1 font-display text-2xl">Preparation + eight-phase strip fold</h1>
           </div>
-          <Link
+          <HashLink
             to="/"
             className="text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
           >
             Back to the atelier
-          </Link>
+          </HashLink>
         </div>
       </header>
 

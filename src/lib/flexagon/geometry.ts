@@ -102,7 +102,7 @@ export interface Point {
 
 /** Hex face wedge polygon: center + two outer vertices for sector `k` (0..5). */
 export function hexWedge(cx: number, cy: number, r: number, k: number): [Point, Point, Point] {
-  const a0 = (-Math.PI / 2) + (k * Math.PI) / 3; // start at top, go CW
+  const a0 = -Math.PI / 2 + (k * Math.PI) / 3; // start at top, go CW
   const a1 = a0 + Math.PI / 3;
   return [
     { x: cx, y: cy },
@@ -114,7 +114,7 @@ export function hexWedge(cx: number, cy: number, r: number, k: number): [Point, 
 /** Hexagon outline (flat top). */
 export function hexagonPoints(cx: number, cy: number, r: number): Point[] {
   return Array.from({ length: 6 }, (_, k) => {
-    const a = (-Math.PI / 2) + (k * Math.PI) / 3;
+    const a = -Math.PI / 2 + (k * Math.PI) / 3;
     return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
   });
 }

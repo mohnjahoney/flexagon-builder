@@ -1,4 +1,3 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Download, Loader2, Play, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,28 +12,9 @@ import volleyballBump from "@/assets/volleyball-bump.png";
 import volleyballSpike from "@/assets/volleyball-spike.png";
 import { TRIANGLE_DEBUG } from "@/lib/flexagon/debug";
 import { PRINTED_FOLDING_INSTRUCTIONS_ENABLED } from "@/lib/flexagon/features";
+import { HashLink } from "@/components/HashLink";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Hexaflexagon Atelier — compose & print" },
-      {
-        name: "description",
-        content:
-          "Upload three images, crop within a hexagon, and download a fold-ready trihexaflexagon template.",
-      },
-      { property: "og:title", content: "Hexaflexagon Atelier" },
-      {
-        property: "og:description",
-        content:
-          "Compose your own trihexaflexagon from three images and print a fold-ready template.",
-      },
-    ],
-  }),
-  component: Index,
-});
-
-function Index() {
+export function Home() {
   const [face1, setFace1] = useState<string | null>(volleyballBall);
   const [face2, setFace2] = useState<string | null>(volleyballBump);
   const [face3, setFace3] = useState<string | null>(volleyballSpike);
@@ -84,7 +64,7 @@ function Index() {
     } catch (err) {
       console.warn("[flexagon] Could not copy custom faces to the animation tab:", err);
     }
-    window.open("/animation", "_blank");
+    window.open(`${window.location.pathname}#/animation`, "_blank");
   }
 
   return (
@@ -225,17 +205,17 @@ function Header() {
   return (
     <header className="border-b border-[var(--color-hairline)]">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link to="/" className="flex items-baseline gap-3">
+        <HashLink to="/" className="flex items-baseline gap-3">
           <span className="font-display text-xl">Hexaflexagon</span>
           <span className="label-eyebrow">Atelier</span>
-        </Link>
+        </HashLink>
         <nav className="flex items-center gap-6 text-sm text-[var(--color-ink-soft)]">
-          <Link to="/about" className="hover:text-[var(--color-ink)]">
+          <HashLink to="/about" className="hover:text-[var(--color-ink)]">
             About
-          </Link>
+          </HashLink>
           {PRINTED_FOLDING_INSTRUCTIONS_ENABLED && (
             <a
-              href="/how-to-fold"
+              href="#/how-to-fold"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-[var(--color-ink)]"

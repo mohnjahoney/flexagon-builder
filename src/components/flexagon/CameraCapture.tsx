@@ -59,7 +59,12 @@ export function CameraCapture({ open, onCancel, onCapture }: CameraCaptureProps)
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onCancel();
+      }}
+    >
       <DialogContent className="max-w-lg bg-card">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Capture from camera</DialogTitle>
@@ -74,7 +79,9 @@ export function CameraCapture({ open, onCancel, onCapture }: CameraCaptureProps)
           </div>
         )}
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
           <Button
             onClick={snap}
             disabled={!!error}
